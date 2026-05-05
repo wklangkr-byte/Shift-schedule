@@ -1,0 +1,2101 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#0f766e">
+<title>ระบบสำรวจกำลังคนประจำวัน — Shift schedule</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&family=IBM+Plex+Sans+Thai:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --accent:#0d9488;--accent-l:#f0fdfa;--accent-m:#99f6e4;
+  --ok:#059669;--ok-l:#ECFDF5;--err:#DC2626;--err-l:#FEF2F2;
+  --warn:#D97706;--warn-l:#FFFBEB;
+  --bdr:#E5E7EB;--bdr-l:#F3F4F6;
+  --tx:#111827;--tx2:#6B7280;--tx3:#9CA3AF;
+  --bg:#fff;--bg2:#F9FAFB;--bg3:#f0fdfa;
+  --r:12px;--r2:8px;--r3:6px;
+  --sh:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --font:'IBM Plex Sans Thai','Sarabun',sans-serif
+}
+body{font-family:var(--font);background:var(--bg3);color:var(--tx);font-size:14px;line-height:1.6;min-height:100vh}
+.shell{display:flex;min-height:100vh}
+
+/* SIDEBAR */
+.sb{width:260px;background:linear-gradient(175deg,#134e4a 0%,#0f766e 45%,#0d9488 100%);
+  color:#fff;display:flex;flex-direction:column;position:fixed;
+  top:0;left:0;bottom:0;z-index:100;overflow-y:auto;
+  box-shadow:4px 0 20px rgba(19,78,74,.3)}
+.sb-logo{padding:24px 20px 18px;border-bottom:1px solid rgba(255,255,255,.15)}
+.sb-logo .brand{font-size:16px;font-weight:600;letter-spacing:-.3px}
+.sb-logo .sub{font-size:11px;color:rgba(255,255,255,.5);margin-top:2px}
+.sb-sec{padding:14px 12px 6px}
+.sb-lbl{font-size:10px;font-weight:600;letter-spacing:.8px;color:rgba(255,255,255,.35);text-transform:uppercase;padding:0 8px;margin-bottom:6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r2);
+  color:rgba(255,255,255,.6);cursor:pointer;font-size:13.5px;transition:all .15s;margin-bottom:2px;
+  border-left:3px solid transparent}
+.nav-item:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.9)}
+.nav-item.active{background:rgba(255,255,255,.15);color:#fff;border-left-color:rgba(255,255,255,.8)}
+.nav-item svg{width:18px;height:18px;opacity:.7;flex-shrink:0}
+.nav-item.active svg{opacity:1}
+
+/* MAIN */
+.main{margin-left:260px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:#fff;border-bottom:1px solid var(--bdr);padding:0 28px;height:60px;
+  display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.topbar-title{font-size:15px;font-weight:600}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border-radius:var(--r2);
+  font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .15s;font-family:var(--font)}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#0f766e}
+.btn-outline{background:#fff;color:var(--tx);border:1px solid var(--bdr)}.btn-outline:hover{background:var(--bg2)}
+.btn-success{background:var(--ok);color:#fff}.btn-success:hover{background:#047857}
+.btn-danger{background:var(--err);color:#fff}
+.btn-sm{padding:5px 11px;font-size:12px}
+
+/* PAGES */
+.page{padding:28px;display:none}
+.page.active{display:block}
+
+/* CARDS */
+.card{background:#fff;border:1px solid var(--bdr);border-radius:var(--r);box-shadow:var(--sh)}
+.card-hd{padding:16px 20px 12px;border-bottom:1px solid var(--bdr-l);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.card-title{font-size:14px;font-weight:600}
+.card-body{padding:18px 20px}
+
+/* GRIDS */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+
+/* STAT */
+.stat{background:#fff;border:1px solid var(--bdr);border-radius:var(--r);padding:16px 18px;box-shadow:var(--sh)}
+.stat-lbl{font-size:11px;color:var(--tx2);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px}
+.stat-val{font-size:26px;font-weight:600;letter-spacing:-.5px}
+.stat-sub{font-size:12px;color:var(--tx3);margin-top:3px}
+
+/* FORM */
+.form-group{margin-bottom:14px}
+.form-label{font-size:12.5px;font-weight:500;margin-bottom:5px;display:block}
+.form-control{width:100%;padding:8px 11px;border:1px solid var(--bdr);border-radius:var(--r2);
+  font-size:13.5px;font-family:var(--font);color:var(--tx);background:#fff;transition:border-color .15s;outline:none}
+.form-control:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(13,148,136,.1)}
+.form-control[type=number]{-moz-appearance:textfield}
+.form-control[type=number]::-webkit-inner-spin-button{opacity:1}
+select.form-control{cursor:pointer}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead tr{background:var(--bg2)}
+th{font-size:11px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;
+  padding:10px 14px;text-align:left;border-bottom:1px solid var(--bdr);white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--bdr-l);font-size:13px;color:var(--tx)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg2)}
+.tr{text-align:right;font-variant-numeric:tabular-nums}
+.tc-ok{color:var(--ok);font-weight:500}
+.tc-err{color:var(--err);font-weight:500}
+.tc-warn{color:var(--warn);font-weight:500}
+
+/* WF TABLE */
+.wf-sec-hd{background:#F8FAFC;border-bottom:1px solid var(--bdr);padding:7px 14px;
+  font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px}
+.wf-row{display:grid;align-items:center;border-bottom:1px solid var(--bdr-l)}
+.wf-row:hover{background:var(--bg2)}
+.wf-cell{padding:8px 14px;font-size:13px}
+.wf-total{background:#EEF2FF;font-weight:600}
+.diff-n{color:var(--err);font-weight:600}
+.diff-p{color:var(--ok);font-weight:600}
+.diff-z{color:var(--tx2)}
+
+input.ie{width:72px;padding:4px 7px;border:1px solid var(--bdr);border-radius:var(--r3);
+  font-size:13px;text-align:center;font-family:var(--font);background:#fff;outline:none}
+input.ie:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(13,148,136,.1)}
+input.le{background:transparent;border:1px dashed transparent;border-radius:4px;
+  padding:2px 6px;font-size:13px;font-family:var(--font);color:var(--tx);width:100%;cursor:text;outline:none}
+input.le:hover{border-color:var(--bdr);background:#fff}
+input.le:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 2px rgba(13,148,136,.1)}
+
+/* TABS */
+.tab-list{display:flex;gap:4px;padding:4px;background:var(--bg3);border-radius:var(--r2);width:fit-content}
+.tab-btn{padding:7px 16px;border-radius:var(--r3);font-size:13px;font-weight:500;cursor:pointer;
+  border:none;background:transparent;color:var(--tx2);font-family:var(--font);transition:all .15s;white-space:nowrap}
+.tab-btn:hover{color:var(--tx);background:rgba(0,0,0,.04)}
+.tab-btn.active{background:#fff;color:var(--tx);box-shadow:var(--sh)}
+.tab-pane{display:none}.tab-pane.active{display:block}
+
+/* BRANCH SELECTOR */
+.bsel{background:#fff;border:1px solid var(--bdr);border-radius:var(--r);padding:20px;box-shadow:var(--sh);margin-bottom:20px}
+.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;max-height:280px;overflow-y:auto}
+.bc{padding:11px 13px;border:1.5px solid var(--bdr);border-radius:var(--r2);cursor:pointer;transition:all .15s;background:#fff}
+.bc:hover{border-color:var(--accent-m);background:var(--accent-l)}
+.bc.sel{border-color:var(--accent);background:var(--accent-l)}
+.bc .ln{font-size:18px;font-weight:700;color:var(--accent)}
+.bc .lname{font-size:12px;color:var(--tx2);margin-top:2px;line-height:1.4}
+.bc .lz{font-size:11px;color:var(--tx3);margin-top:3px}
+
+/* CHIPS */
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:500}
+.c-info{background:var(--accent-l);color:var(--accent)}
+.c-ok{background:var(--ok-l);color:var(--ok)}
+.c-err{background:var(--err-l);color:var(--err)}
+.c-zone{background:#EEF2FF;color:#4338CA}
+
+/* TOAST */
+.toast-wrap{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{background:#111827;color:#fff;padding:11px 16px;border-radius:var(--r2);font-size:13px;
+  box-shadow:0 4px 12px rgba(0,0,0,.15);display:flex;align-items:center;gap:8px;animation:tIn .2s ease}
+.toast.ok{background:var(--ok)}.toast.err{background:var(--err)}
+@keyframes tIn{from{transform:translateX(50px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:200;
+  display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-bg.open{opacity:1;pointer-events:all}
+.modal{background:#fff;border-radius:var(--r);box-shadow:0 20px 60px rgba(0,0,0,.2);
+  width:480px;max-width:95vw;transform:scale(.96);transition:transform .2s}
+.modal-bg.open .modal{transform:scale(1)}
+.modal-hd{padding:18px 20px 14px;border-bottom:1px solid var(--bdr);display:flex;justify-content:space-between;align-items:center}
+.modal-title{font-size:15px;font-weight:600}
+.modal-x{cursor:pointer;color:var(--tx2);font-size:20px;border:none;background:none;padding:4px}
+.modal-bd{padding:18px 20px}
+.modal-ft{padding:12px 20px 16px;border-top:1px solid var(--bdr);display:flex;justify-content:flex-end;gap:10px}
+
+/* MISC */
+.flex{display:flex}.ic{align-items:center}.jb{justify-content:space-between}.g8{gap:8px}.g12{gap:12px}
+.fw6{font-weight:600}.tx2{color:var(--tx2);font-size:12px}
+.mt4{margin-top:4px}.mb16{margin-bottom:16px}.mb20{margin-bottom:20px}
+.w-full{width:100%}
+.empty{text-align:center;padding:40px 20px;color:var(--tx2)}
+.chart-wrap{position:relative;width:100%}
+.sec-gap{margin-bottom:20px}
+/* Role badge colors */
+.role-admin .user-avatar{background:linear-gradient(135deg,#0f766e,#0d9488)!important}
+.role-viewer .user-avatar{background:linear-gradient(135deg,#059669,#10b981)!important}
+/* Viewer notice banner */
+.viewer-notice{
+  display:none;background:#FFFBEB;border:1px solid #FDE68A;border-radius:var(--r2);
+  padding:12px 16px;margin-bottom:18px;font-size:13px;color:#92400e;
+  display:flex;align-items:center;gap:10px
+}
+.viewer-notice.show{display:flex}
+.viewer-notice svg{flex-shrink:0;width:18px;height:18px;color:#D97706}
+
+/* ===== LOGIN OVERLAY ===== */
+#login-overlay{
+  position:fixed;inset:0;z-index:9000;
+  background:linear-gradient(135deg,#134e4a 0%,#0f766e 50%,#0d9488 100%);
+  display:flex;align-items:center;justify-content:center;
+  transition:opacity .4s ease
+}
+#login-overlay.hide{opacity:0;pointer-events:none}
+.login-box{
+  background:#fff;border-radius:20px;padding:40px 44px;width:400px;max-width:92vw;
+  box-shadow:0 25px 60px rgba(0,0,0,.3);position:relative;overflow:hidden
+}
+.login-box::before{
+  content:'';position:absolute;top:-60px;right:-60px;
+  width:160px;height:160px;border-radius:50%;
+  background:linear-gradient(135deg,#f0fdfa,#99f6e4);opacity:.6
+}
+.login-box::after{
+  content:'';position:absolute;bottom:-40px;left:-40px;
+  width:120px;height:120px;border-radius:50%;
+  background:linear-gradient(135deg,#99f6e4,#5eead4);opacity:.4
+}
+.login-logo{text-align:center;margin-bottom:28px;position:relative;z-index:1}
+.login-logo .logo-icon{
+  width:64px;height:64px;background:linear-gradient(135deg,#0f766e,#0d9488);
+  border-radius:16px;display:flex;align-items:center;justify-content:center;
+  margin:0 auto 12px;box-shadow:0 8px 20px rgba(13,148,136,.35)
+}
+.login-logo .logo-icon svg{width:32px;height:32px;color:#fff}
+.login-logo h1{font-size:20px;font-weight:700;color:#111827;letter-spacing:-.3px}
+.login-logo p{font-size:13px;color:#6B7280;margin-top:3px}
+.login-field{margin-bottom:16px;position:relative;z-index:1}
+.login-field label{display:block;font-size:12.5px;font-weight:600;color:#374151;margin-bottom:6px}
+.login-field input{
+  width:100%;padding:11px 14px;border:1.5px solid #E5E7EB;border-radius:10px;
+  font-size:14px;font-family:var(--font);color:#111827;background:#F9FAFB;
+  outline:none;transition:all .15s
+}
+.login-field input:focus{border-color:#0d9488;background:#fff;box-shadow:0 0 0 3px rgba(13,148,136,.1)}
+.login-field .pw-wrap{position:relative}
+.login-field .pw-wrap input{padding-right:42px}
+.login-field .pw-eye{
+  position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  cursor:pointer;color:#9CA3AF;background:none;border:none;padding:4px;
+  display:flex;align-items:center
+}
+.login-btn{
+  width:100%;padding:13px;background:linear-gradient(135deg,#0f766e,#0d9488);
+  color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;
+  font-family:var(--font);cursor:pointer;transition:all .2s;margin-top:8px;
+  position:relative;z-index:1;box-shadow:0 4px 14px rgba(13,148,136,.35)
+}
+.login-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(13,148,136,.45)}
+.login-btn:active{transform:translateY(0)}
+.login-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.login-err{
+  background:#FEF2F2;border:1px solid #FECACA;color:#DC2626;
+  padding:10px 14px;border-radius:8px;font-size:13px;text-align:center;
+  margin-bottom:14px;display:none;position:relative;z-index:1
+}
+.login-err.show{display:block}
+.login-footer{text-align:center;margin-top:20px;font-size:11.5px;color:#9CA3AF;position:relative;z-index:1}
+
+/* Secret trigger - tiny invisible area bottom-right of login screen */
+#secret-trigger{
+  position:fixed;bottom:0;right:0;width:30px;height:30px;z-index:9100;cursor:default
+}
+
+/* User badge in topbar */
+.user-badge{
+  display:flex;align-items:center;gap:8px;padding:6px 12px;
+  background:#f0fdfa;border:1px solid #99f6e4;border-radius:99px;cursor:pointer;
+  font-size:13px;font-weight:500;color:#0f766e;transition:all .15s
+}
+.user-badge:hover{background:#ccfbf1}
+.user-avatar{
+  width:28px;height:28px;background:linear-gradient(135deg,#0f766e,#0d9488);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:11px;font-weight:700
+}
+
+/* Sidebar logout button */
+.sb-footer{
+  margin-top:auto;padding:12px;border-top:1px solid rgba(255,255,255,.12)
+}
+.sb-user-info{
+  display:flex;align-items:center;gap:10px;padding:10px 12px 8px;
+  border-radius:var(--r2)
+}
+.sb-user-avatar{
+  width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.2);
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:12px;font-weight:700;flex-shrink:0;
+  border:2px solid rgba(255,255,255,.3)
+}
+.sb-user-name{font-size:13px;font-weight:600;color:#fff;line-height:1.3}
+.sb-user-role{font-size:11px;color:rgba(255,255,255,.5);margin-top:1px}
+.btn-logout{
+  display:flex;align-items:center;gap:9px;width:100%;padding:9px 12px;
+  border-radius:var(--r2);background:rgba(239,68,68,.12);
+  border:1px solid rgba(239,68,68,.25);color:rgba(255,180,180,.9);
+  cursor:pointer;font-size:13px;font-weight:500;font-family:var(--font);
+  transition:all .15s;margin-top:4px
+}
+.btn-logout:hover{
+  background:rgba(239,68,68,.25);border-color:rgba(239,68,68,.4);
+  color:#fff
+}
+.btn-logout svg{width:16px;height:16px;opacity:.85;flex-shrink:0}
+
+/* Logout confirm modal */
+#logout-modal-bg{
+  position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .2s
+}
+#logout-modal-bg.open{opacity:1;pointer-events:all}
+.logout-modal{
+  background:#fff;border-radius:16px;
+  box-shadow:0 20px 60px rgba(0,0,0,.25);
+  width:380px;max-width:92vw;
+  transform:scale(.95);transition:transform .2s;overflow:hidden
+}
+#logout-modal-bg.open .logout-modal{transform:scale(1)}
+.logout-modal-icon{
+  width:56px;height:56px;background:#FEF2F2;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;margin:0 auto 14px
+}
+.logout-modal-icon svg{width:26px;height:26px;color:#DC2626}
+.logout-modal-body{padding:28px 24px 20px;text-align:center}
+.logout-modal-title{font-size:17px;font-weight:700;color:#111827;margin-bottom:6px}
+.logout-modal-sub{font-size:13.5px;color:#6B7280;line-height:1.6}
+.logout-modal-foot{
+  display:flex;gap:10px;padding:16px 20px;
+  border-top:1px solid #F3F4F6;background:#FAFAFA
+}
+.logout-modal-foot .btn{flex:1;justify-content:center;font-size:13.5px;padding:10px}
+
+/* ========================================================
+   RESPONSIVE — Mobile / Tablet / PC / iOS / Android
+   ======================================================== */
+
+/* Viewport meta already set — ensure no tap highlight on iOS */
+* { -webkit-tap-highlight-color: transparent; }
+input, select, textarea, button { touch-action: manipulation; }
+/* Prevent iOS font-size bump on focus */
+input, select, textarea { font-size: max(16px, 1em); }
+
+/* ─── Hamburger toggle button (hidden on PC) ─────────── */
+#sb-toggle {
+  display: none;
+  align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: var(--r2);
+  background: transparent; border: 1px solid var(--bdr);
+  cursor: pointer; flex-shrink: 0;
+}
+#sb-toggle svg { width: 20px; height: 20px; color: var(--tx); }
+
+/* Sidebar overlay backdrop (mobile) */
+#sb-backdrop {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.45); z-index: 99;
+}
+#sb-backdrop.open { display: block; }
+
+/* ─── PC / Large Desktop ≥ 1280px ─────────────────────── */
+@media (min-width: 1280px) {
+  .g4 { grid-template-columns: repeat(4, 1fr); }
+  .g2 { grid-template-columns: 1fr 1fr; }
+  .page { padding: 32px; }
+  .bgrid { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+}
+
+/* ─── Tablet Landscape / Small Desktop 1024–1279px ─────── */
+@media (max-width: 1279px) and (min-width: 1024px) {
+  .sb { width: 220px; }
+  .main { margin-left: 220px; }
+  .g4 { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .bgrid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+}
+
+/* ─── Tablet Portrait 768–1023px ─────────────────────── */
+@media (max-width: 1023px) and (min-width: 768px) {
+  /* Sidebar becomes slide-in drawer */
+  .sb {
+    width: 260px;
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+  }
+  .sb.open { transform: translateX(0); }
+  .main { margin-left: 0; }
+
+  #sb-toggle { display: flex; }
+
+  .page { padding: 20px; }
+  .g4 { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .g2 { grid-template-columns: 1fr; gap: 12px; }
+  .stat-val { font-size: 22px; }
+
+  .topbar { padding: 0 16px; gap: 8px; }
+  .topbar-title { font-size: 14px; }
+  #today-lbl { display: none; }
+
+  /* Branch grid */
+  .bgrid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); max-height: 220px; }
+
+  /* History filters: wrap nicely */
+  #page-history .flex, #page-dashboard .flex { flex-wrap: wrap; }
+  #h-from, #h-to, #h-regional, #h-zone, #h-branch { width: 140px !important; }
+
+  /* Login box */
+  .login-box { padding: 32px 28px; width: 360px; }
+
+  /* WF table inputs */
+  input.ie { width: 60px; }
+}
+
+/* ─── Mobile Large 480–767px ─────────────────────────── */
+@media (max-width: 767px) and (min-width: 480px) {
+  .sb {
+    width: 260px;
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+  }
+  .sb.open { transform: translateX(0); }
+  .main { margin-left: 0; }
+  #sb-toggle { display: flex; }
+
+  .page { padding: 14px; }
+  .g4 { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .g2 { grid-template-columns: 1fr; gap: 10px; }
+  .stat-val { font-size: 20px; }
+  .stat { padding: 12px 14px; }
+
+  .topbar { padding: 0 12px; height: 54px; }
+  .topbar-title { font-size: 13px; }
+  #today-lbl { display: none; }
+  #fb-status { display: none; }
+  #user-name-lbl { display: none; }
+
+  .card-hd { flex-wrap: wrap; gap: 8px; padding: 12px 14px; }
+  .card-body { padding: 12px 14px; }
+
+  /* Branch selector filters: stack */
+  .bsel { padding: 14px; }
+  .bsel .flex.g12 { flex-direction: column; gap: 8px; }
+  #b-search, #b-regional, #b-zone { max-width: 100% !important; width: 100% !important; }
+  #rec-date, #rec-time { width: 100% !important; max-width: 100% !important; }
+  .bsel .flex.ic.g8 { width: 100%; }
+  .bgrid { grid-template-columns: repeat(2, 1fr); max-height: 200px; }
+
+  /* Step 2 action buttons */
+  #step2 > .flex { flex-direction: column; align-items: stretch !important; }
+  #btn-change, #btn-save { width: 100%; justify-content: center; }
+
+  /* WF table: compact */
+  .wf-cell { padding: 6px 8px; font-size: 12px; }
+  input.ie { width: 52px; font-size: 12px; }
+  input.le { font-size: 12px; }
+
+  /* History page */
+  #page-history .flex { flex-direction: column; align-items: stretch; }
+  #h-from, #h-to, #h-regional, #h-zone, #h-branch, #btn-export { width: 100% !important; }
+  #btn-export { margin-left: 0 !important; }
+
+  /* Dashboard filter row */
+  #page-dashboard > .flex { flex-direction: column; align-items: stretch; }
+  #d-from, #d-to, #btn-d-filter { width: 100% !important; }
+
+  /* Tab buttons: scroll horizontally */
+  .tab-list { overflow-x: auto; width: 100%; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+  .tab-btn { white-space: nowrap; flex-shrink: 0; }
+
+  /* Login box */
+  .login-box { padding: 28px 20px; width: calc(100vw - 32px); border-radius: 16px; }
+  .login-logo h1 { font-size: 18px; }
+  .login-logo .logo-icon { width: 52px; height: 52px; }
+
+  /* Modal */
+  .modal { width: calc(100vw - 24px); }
+  .logout-modal { width: calc(100vw - 24px); }
+
+  /* Charts: reduce height */
+  #page-dashboard .card [style*="height:260px"] { height: 200px !important; }
+
+  /* User badge: icon only */
+  .user-badge { padding: 6px 8px; gap: 4px; }
+}
+
+/* ─── Mobile Small ≤ 479px ──────────────────────────── */
+@media (max-width: 479px) {
+  :root {
+    --r: 10px; --r2: 7px; --r3: 5px;
+    font-size: 13px;
+  }
+
+  .sb {
+    width: 100vw; max-width: 280px;
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+  }
+  .sb.open { transform: translateX(0); }
+  .main { margin-left: 0; }
+  #sb-toggle { display: flex; }
+
+  .page { padding: 10px; }
+
+  /* Stats: 2 columns */
+  .g4 { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .g2 { grid-template-columns: 1fr; gap: 8px; }
+  .stat { padding: 10px 12px; }
+  .stat-val { font-size: 18px; }
+  .stat-lbl { font-size: 10px; }
+
+  .topbar { padding: 0 10px; height: 50px; }
+  .topbar-title { font-size: 12px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #today-lbl, #fb-status { display: none; }
+  #user-name-lbl { display: none; }
+  .user-avatar { width: 30px; height: 30px; font-size: 10px; }
+  .user-badge { padding: 5px 8px; }
+
+  .card-hd { flex-wrap: wrap; gap: 6px; padding: 10px 12px; }
+  .card-body { padding: 10px 12px; }
+  .card-title { font-size: 13px; }
+
+  /* Branch selector */
+  .bsel { padding: 10px; margin-bottom: 12px; }
+  .bsel .flex.g12 { flex-direction: column; gap: 6px; }
+  #b-search, #b-regional, #b-zone, #rec-date, #rec-time { max-width: 100% !important; width: 100% !important; }
+  .bsel .flex.ic.g8, .bsel .flex.ic.jb > div:last-child { width: 100%; flex-direction: column; align-items: flex-start !important; }
+  .bgrid { grid-template-columns: 1fr 1fr; max-height: 180px; gap: 6px; }
+  .bc { padding: 8px 10px; }
+  .bc .ln { font-size: 15px; }
+  .bc .lname { font-size: 11px; }
+  .bc .lz { display: none; }
+
+  /* Step 2 */
+  #step2 > .flex { flex-direction: column; align-items: stretch !important; gap: 8px; }
+  #btn-change, #btn-save { width: 100%; justify-content: center; }
+  #step2 .card [style*="flex:1"] { min-width: unset; }
+  #sel-badge { width: 36px !important; height: 36px !important; font-size: 13px !important; }
+
+  /* WF table: very compact, allow horizontal scroll */
+  .card:has(#wf-container) { overflow-x: auto; }
+  #wf-container { min-width: 380px; }
+  .wf-cell { padding: 5px 6px; font-size: 11px; }
+  input.ie { width: 46px; font-size: 11px; padding: 3px 4px; }
+  input.le { font-size: 11px; }
+  .wf-sec-hd { font-size: 10px; padding: 5px 10px; }
+
+  /* History filters: all stacked */
+  #page-history .flex { flex-direction: column; align-items: stretch; gap: 6px !important; }
+  #h-from, #h-to, #h-regional, #h-zone, #h-branch, #btn-export,
+  #h-from + .tx2 { width: 100% !important; margin: 0; }
+  #btn-export { margin-left: 0 !important; }
+
+  /* Table: horizontal scroll */
+  .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  th, td { font-size: 11px; padding: 8px 10px; white-space: nowrap; }
+
+  /* Dashboard */
+  #page-dashboard > .flex.g8 { flex-direction: column; align-items: stretch; gap: 6px !important; }
+  #d-from, #d-to, #btn-d-filter { width: 100% !important; }
+  .tab-list { overflow-x: auto; width: 100%; flex-wrap: nowrap; padding: 3px; -webkit-overflow-scrolling: touch; }
+  .tab-btn { font-size: 12px; padding: 6px 12px; flex-shrink: 0; }
+  #page-dashboard .g2 { grid-template-columns: 1fr; }
+  #page-dashboard canvas { height: 180px !important; }
+  #page-dashboard [style*="height:260px"] { height: 180px !important; }
+  #page-dashboard [style*="height:320px"] { height: 220px !important; }
+  .d-zone-reg, #d-br-reg, #d-br-zone { width: 100% !important; }
+
+  /* Login */
+  .login-box { padding: 24px 16px; width: calc(100vw - 24px); border-radius: 14px; }
+  .login-logo { margin-bottom: 20px; }
+  .login-logo h1 { font-size: 16px; }
+  .login-logo p { font-size: 12px; }
+  .login-logo .logo-icon { width: 48px; height: 48px; border-radius: 12px; }
+  .login-logo .logo-icon svg { width: 26px; height: 26px; }
+  .login-btn { font-size: 14px; padding: 12px; }
+  .login-field input { font-size: 16px; padding: 10px 12px; }
+
+  /* Modals */
+  .modal { width: calc(100vw - 16px); }
+  .logout-modal { width: calc(100vw - 16px); border-radius: 12px; }
+
+  /* Toast */
+  .toast-wrap { bottom: 12px; right: 8px; left: 8px; }
+  .toast { font-size: 12px; padding: 9px 13px; }
+
+  /* Buttons */
+  .btn { font-size: 12px; padding: 7px 12px; }
+  .btn-sm { font-size: 11px; padding: 5px 9px; }
+}
+
+/* ─── Safe area insets for notch devices (iOS/Android) ─── */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .sb { padding-bottom: env(safe-area-inset-bottom); }
+  .toast-wrap { bottom: calc(12px + env(safe-area-inset-bottom)); }
+  .topbar {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+  body { padding-top: env(safe-area-inset-top); }
+}
+
+/* ─── Print: hide sidebar & controls ─────────────────── */
+@media print {
+  .sb, .topbar, .bsel, #sb-toggle, #sb-backdrop, .toast-wrap,
+  .btn, .tab-list, #page-history .flex:first-child { display: none !important; }
+  .main { margin-left: 0; }
+  .page { padding: 16px; }
+}
+</style>
+</head>
+<body>
+<!-- ===== LOGIN OVERLAY ===== -->
+<div id="login-overlay">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="logo-icon">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+      </div>
+      <h1>Shift schedule</h1>
+      <p>ระบบสำรวจกำลังคนประจำวัน</p>
+    </div>
+
+    <div class="login-err" id="login-err">
+      ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง
+    </div>
+
+    <div class="login-field">
+      <label>ชื่อผู้ใช้</label>
+      <input type="text" id="inp-user" placeholder="กรอกชื่อผู้ใช้" autocomplete="username" spellcheck="false">
+    </div>
+
+    <div class="login-field">
+      <label>รหัสผ่าน</label>
+      <div class="pw-wrap">
+        <input type="password" id="inp-pass" placeholder="กรอกรหัสผ่าน" autocomplete="current-password">
+        <button class="pw-eye" id="pw-toggle" type="button" title="แสดง/ซ่อนรหัสผ่าน">
+          <svg id="eye-icon" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <button class="login-btn" id="login-btn" onclick="doLogin()">
+      เข้าสู่ระบบ
+    </button>
+
+    <div class="login-footer">
+      Shift schedule Man-Power Survey System v2.0
+    </div>
+  </div>
+</div>
+<!-- secret trigger corner -->
+<div id="secret-trigger" title=""></div>
+
+<div class="shell">
+
+<!-- SIDEBAR -->
+<aside class="sb">
+  <div class="sb-logo">
+    <div class="brand">Shift schedule</div>
+    <div class="sub">ระบบสำรวจกำลังคนประจำวัน</div>
+  </div>
+  <div class="sb-sec">
+    <div class="sb-lbl">เมนูหลัก</div>
+    <div class="nav-item active" data-page="record">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      บันทึกกำลังคน
+    </div>
+    <div class="nav-item" data-page="history">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      ประวัติการบันทึก
+    </div>
+    <div class="nav-item" data-page="dashboard">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      Dashboard สรุป
+    </div>
+  </div>
+  <!-- Sidebar Footer: User info + Logout -->
+  <div class="sb-footer">
+    <div class="sb-user-info">
+      <div class="sb-user-avatar" id="sb-avatar">A</div>
+      <div>
+        <div class="sb-user-name" id="sb-user-name">Admin</div>
+        <div class="sb-user-role" id="sb-user-role">Administrator</div>
+      </div>
+    </div>
+    <button class="btn-logout" onclick="openLogoutModal()">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+      </svg>
+      ออกจากระบบ
+    </button>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <button id="sb-toggle" aria-label="เปิด/ปิดเมนู" onclick="toggleSidebar()">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+      </svg>
+    </button>
+    <span class="topbar-title" id="topbar-title">บันทึกกำลังคนประจำวัน</span>
+    <div style="display:flex;align-items:center;gap:16px">
+      <span id="fb-status" style="font-size:12px;font-weight:500">🔄 กำลังเชื่อมต่อ...</span>
+      <span id="today-lbl" style="font-size:13px;color:var(--tx2)"></span>
+      <div class="user-badge" id="user-badge" onclick="openLogoutModal()" title="คลิกเพื่อออกจากระบบ">
+        <div class="user-avatar" id="user-avatar">A</div>
+        <span id="user-name-lbl">Admin</span>
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE RECORD -->
+  <div class="page active" id="page-record">
+    <!-- Step 1 -->
+    <div class="bsel" id="step1">
+      <div class="flex ic jb mb16" style="flex-wrap:wrap;gap:12px">
+        <div>
+          <div class="fw6" style="font-size:15px">เลือกสาขาที่ต้องการบันทึก</div>
+          <div class="tx2 mt4">ค้นหาและเลือกสาขาก่อนบันทึกข้อมูลกำลังคน</div>
+        </div>
+      </div>
+      <div class="flex g12 mb16" style="flex-wrap:wrap">
+        <input type="text" id="b-search" placeholder="ค้นหาชื่อสาขา หรือเลขสาขา..." class="form-control" style="max-width:260px">
+        <select id="b-regional" class="form-control" style="max-width:160px">
+          <option value="">— Regional ทั้งหมด —</option>
+        </select>
+        <select id="b-zone" class="form-control" style="max-width:150px">
+          <option value="">— Zone ทั้งหมด —</option>
+        </select>
+        <div class="flex ic g8" style="margin-left:auto">
+          <label class="form-label" style="margin:0;white-space:nowrap">วันที่:</label>
+          <input type="date" id="rec-date" class="form-control" style="width:160px">
+        </div>
+        <div class="flex ic g8">
+          <label class="form-label" style="margin:0;white-space:nowrap">ช่วงเวลา:</label>
+          <select id="rec-time" class="form-control" style="width:170px">
+            <option value="05:00-12:00">05:00 - 12:00</option>
+            <option value="12:00-16:00">12:00 - 16:00</option>
+            <option value="16:00-20:00">16:00 - 20:00</option>
+            <option value="20:00-00:00">20:00 - 00:00</option>
+          </select>
+        </div>
+      </div>
+      <div class="bgrid" id="b-grid"></div>
+    </div>
+
+    <!-- Step 2 -->
+    <div id="step2" style="display:none">
+      <div class="flex ic g12 mb16" style="flex-wrap:wrap">
+        <div class="card" style="padding:13px 17px;flex:1;min-width:260px">
+          <div class="flex ic g12">
+            <div id="sel-badge" style="width:44px;height:44px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px">—</div>
+            <div>
+              <div class="fw6" style="font-size:15px" id="sel-name">—</div>
+              <div class="tx2" id="sel-detail">—</div>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-outline" id="btn-change">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"/></svg>
+          เปลี่ยนสาขา
+        </button>
+        <button class="btn btn-success" id="btn-save" style="margin-left:auto">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          บันทึกข้อมูล
+        </button>
+      </div>
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-title">ตารางกำลังคน — <span id="wf-lbl"></span></span>
+          <div class="flex g8">
+            <span class="chip c-info" id="wf-date-badge"></span>
+            <span class="chip c-ok" id="wf-time-badge"></span>
+          </div>
+        </div>
+        <div id="wf-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE HISTORY -->
+  <div class="page" id="page-history">
+    <div class="flex g8 mb16" style="flex-wrap:wrap;align-items:center">
+      <span class="tx2">กรอง:</span>
+      <input type="date" id="h-from" class="form-control" style="width:155px">
+      <span class="tx2">ถึง</span>
+      <input type="date" id="h-to" class="form-control" style="width:155px">
+      <select id="h-regional" class="form-control" style="width:160px"><option value="">— Regional —</option></select>
+      <select id="h-zone" class="form-control" style="width:150px"><option value="">— Zone —</option></select>
+      <select id="h-branch" class="form-control" style="width:200px"><option value="">— สาขาทั้งหมด —</option></select>
+      <button class="btn btn-success btn-sm" id="btn-export" style="margin-left:auto">
+        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        Export Excel
+      </button>
+    </div>
+    <div class="card">
+      <div class="card-hd">
+        <span class="card-title">ประวัติการบันทึก</span>
+        <span class="chip c-info" id="h-count">0 รายการ</span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>วันที่</th><th>ช่วงเวลา</th><th>เลขสาขา</th><th>ชื่อสาขา</th><th>Zone</th><th>Regional</th><th class="tr">ตามตารางกะ</th><th class="tr">มาทำงานจริง</th><th class="tr">ขาด/เกิน</th><th class="tr">อัตรา%</th><th></th></tr></thead>
+          <tbody id="h-tbody"></tbody>
+        </table>
+        <div class="empty" id="h-empty" style="display:none">
+          <div style="font-size:32px;margin-bottom:10px">📋</div>
+          <div>ยังไม่มีข้อมูลการบันทึก</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE DASHBOARD -->
+  <div class="page" id="page-dashboard">
+    <div class="g4 sec-gap">
+      <div class="stat"><div class="stat-lbl">บันทึกทั้งหมด</div><div class="stat-val" id="d-count">0</div><div class="stat-sub">รายการ</div></div>
+      <div class="stat"><div class="stat-lbl">พนักงานตามแผน</div><div class="stat-val" id="d-plan">0</div><div class="stat-sub">คน รวมทุกสาขา</div></div>
+      <div class="stat"><div class="stat-lbl">พนักงานมาทำงาน</div><div class="stat-val" id="d-actual">0</div><div class="stat-sub">คน รวมทุกสาขา</div></div>
+      <div class="stat"><div class="stat-lbl">อัตราการปฏิบัติงาน</div><div class="stat-val" id="d-rate">—</div><div class="stat-sub">% เฉลี่ย</div></div>
+    </div>
+    <div class="flex g8 mb16" style="flex-wrap:wrap;align-items:center">
+      <input type="date" id="d-from" class="form-control" style="width:155px">
+      <span class="tx2">ถึง</span>
+      <input type="date" id="d-to" class="form-control" style="width:155px">
+      <button class="btn btn-outline btn-sm" id="btn-d-filter">แสดงข้อมูล</button>
+    </div>
+    <div class="tab-list mb16">
+      <button class="tab-btn active" data-tab="regional">สรุปตาม Regional</button>
+      <button class="tab-btn" data-tab="zone">สรุปตาม Zone</button>
+      <button class="tab-btn" data-tab="branch">สรุปตามสาขา</button>
+    </div>
+
+    <!-- TAB REGIONAL -->
+    <div class="tab-pane active" id="tab-regional">
+      <div class="g2 sec-gap">
+        <div class="card">
+          <div class="card-hd"><span class="card-title">กำลังคนแยกตาม Regional</span></div>
+          <div style="padding:14px;position:relative;height:260px">
+            <canvas id="ch-regional" role="img" aria-label="Regional chart">Regional chart</canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><span class="card-title">อัตราการปฏิบัติงาน (%)</span></div>
+          <div style="padding:14px;position:relative;height:260px">
+            <canvas id="ch-rate" role="img" aria-label="Rate chart">Rate chart</canvas>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><span class="card-title">ตารางสรุป Regional</span></div>
+        <div class="tbl-wrap">
+          <table><thead><tr><th>Regional</th><th>จำนวนสาขา</th><th class="tr">ตามตารางกะ</th><th class="tr">มาทำงานจริง</th><th class="tr">ขาด/เกิน</th><th class="tr">อัตรา%</th></tr></thead>
+          <tbody id="tbl-regional"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB ZONE -->
+    <div class="tab-pane" id="tab-zone">
+      <div class="flex g8 mb16">
+        <select id="d-zone-reg" class="form-control" style="width:180px"><option value="">— Regional ทั้งหมด —</option></select>
+      </div>
+      <div class="card sec-gap">
+        <div class="card-hd"><span class="card-title">กำลังคนแยกตาม Zone</span></div>
+        <div style="padding:14px;position:relative" id="ch-zone-wrap">
+          <canvas id="ch-zone" role="img" aria-label="Zone chart">Zone chart</canvas>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><span class="card-title">ตารางสรุป Zone</span></div>
+        <div class="tbl-wrap">
+          <table><thead><tr><th>Zone</th><th>Regional</th><th>จำนวนสาขา</th><th class="tr">ตามตารางกะ</th><th class="tr">มาทำงานจริง</th><th class="tr">ขาด/เกิน</th><th class="tr">อัตรา%</th></tr></thead>
+          <tbody id="tbl-zone"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB BRANCH -->
+    <div class="tab-pane" id="tab-branch">
+      <div class="flex g8 mb16" style="flex-wrap:wrap">
+        <select id="d-br-reg" class="form-control" style="width:180px"><option value="">— Regional ทั้งหมด —</option></select>
+        <select id="d-br-zone" class="form-control" style="width:160px"><option value="">— Zone ทั้งหมด —</option></select>
+      </div>
+      <div class="card sec-gap">
+        <div class="card-hd">
+          <span class="card-title">กราฟเปรียบเทียบกำลังคนรายสาขา</span>
+          <div class="flex ic g8">
+            <label class="form-label" style="margin:0;white-space:nowrap;font-size:12px">เลือกสาขา:</label>
+            <select id="br-chart-sel" class="form-control" style="width:280px"><option value="">— เลือกสาขา —</option></select>
+          </div>
+        </div>
+        <div id="br-chart-empty" class="empty">
+          <div style="font-size:32px;margin-bottom:10px">📊</div>
+          <div>เลือกสาขาด้านบนเพื่อแสดงกราฟ</div>
+        </div>
+        <div id="br-chart-body" style="display:none;padding:18px 20px">
+          <div class="flex g8 mb16" id="br-info" style="flex-wrap:wrap"></div>
+          <div style="position:relative;width:100%;height:320px">
+            <canvas id="ch-branch" role="img" aria-label="Branch chart">Branch chart</canvas>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-hd"><span class="card-title">ตารางสรุปตามสาขา</span></div>
+        <div class="tbl-wrap">
+          <table><thead><tr><th>เลขสาขา</th><th>ชื่อสาขา</th><th>Zone</th><th>Regional</th><th class="tr">ตามตารางกะ</th><th class="tr">มาทำงานจริง</th><th class="tr">ขาด/เกิน</th><th class="tr">อัตรา%</th></tr></thead>
+          <tbody id="tbl-branch"></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Sidebar backdrop for mobile -->
+<div id="sb-backdrop" onclick="closeSidebar()"></div>
+
+<div class="toast-wrap" id="toasts"></div>
+
+<div class="modal-bg" id="modal-del">
+  <div class="modal">
+    <div class="modal-hd"><span class="modal-title">ยืนยันการลบ</span><button class="modal-x" id="mdel-x">×</button></div>
+    <div class="modal-bd"><p>คุณต้องการลบข้อมูลนี้ใช่หรือไม่? ไม่สามารถยกเลิกได้</p></div>
+    <div class="modal-ft">
+      <button class="btn btn-outline" id="mdel-cancel">ยกเลิก</button>
+      <button class="btn btn-danger" id="mdel-ok">ลบข้อมูล</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOGOUT CONFIRM MODAL -->
+<div id="logout-modal-bg">
+  <div class="logout-modal">
+    <div class="logout-modal-body">
+      <div class="logout-modal-icon">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+        </svg>
+      </div>
+      <div class="logout-modal-title">ออกจากระบบ</div>
+      <div class="logout-modal-sub">คุณต้องการออกจากระบบใช่หรือไม่?<br>ข้อมูลที่ยังไม่ได้บันทึกอาจสูญหายได้</div>
+    </div>
+    <div class="logout-modal-foot">
+      <button class="btn btn-outline" onclick="closeLogoutModal()">ยกเลิก</button>
+      <button class="btn btn-danger" onclick="doLogout()">
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        ออกจากระบบ
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+const BRANCHES = [{"num":"001","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาลาดพร้าว 1","zone":"Zone9","regional":"Regional 2","manager":"คุณ เอกธัช นาวิกบุตร"},{"num":"002","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาแจ้งวัฒนะ 2","zone":"Zone9","regional":"Regional 2","manager":"คุณ เอกธัช นาวิกบุตร"},{"num":"003","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาศรีนครินทร์ 3","zone":"Zone10","regional":"Regional 2","manager":"คุณ อารีย์ นิ่มกลาง"},{"num":"004","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาบางบอน 4","zone":"Zone6","regional":"Regional 2","manager":"คุณ ภกรณ์กาญจ์ เมทินีพิศาลกุล"},{"num":"005","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาชลบุรี 5","zone":"Zone13","regional":"Regional 3","manager":"คุณ เสถียร ผลขาว"},{"num":"006","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเชียงใหม่ 6","zone":"Zone1","regional":"Regional 1","manager":"คุณ พิชิต คันธาเวช"},{"num":"007","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขานครราชสีมา 7","zone":"Zone11","regional":"Regional 3","manager":"คุณ ณัฐวัฒน์ เดชโนนสังข์"},{"num":"008","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขารังสิต 8","zone":"Zone12","regional":"Regional 3","manager":"คุณ พจนีย์ กลั่นเขตกิจ"},{"num":"009","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาหาดใหญ่ 9","zone":"Zone17","regional":"Regional 4","manager":"คุณ พงศิกร รังษีพลาสวัสดิ์"},{"num":"010","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาอุดรธานี 10","zone":"Zone3","regional":"Regional 1","manager":"คุณ มะลิวัลย์ โขงชัยภูมิ"},{"num":"011","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาพิษณุโลก 11","zone":"Zone2","regional":"Regional 1","manager":"คุณ ธีระพงษ์ อินจุ้มสาย"},{"num":"012","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาขอนแก่น 12","zone":"Zone4","regional":"Regional 1","manager":"คุณ สุมาลี หาญสว่าง"},{"num":"013","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสุราษฎร์ธานี 13","zone":"Zone16","regional":"Regional 4","manager":"คุณ บุษรา ไชยเสน"},{"num":"014","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาอุบลราชธานี 14","zone":"Zone11","regional":"Regional 3","manager":"คุณ ณัฐวัฒน์ เดชโนนสังข์"},{"num":"015","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาระยอง 15","zone":"Zone14","regional":"Regional 3","manager":"คุณ รัตวัชร์ พงศ์วัจนาทิน"},{"num":"016","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขานครสวรรค์ 16","zone":"Zone5","regional":"Regional 1","manager":"คุณ ลัดดาวัลย์ ธรรมศร"},{"num":"017","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาจรัญสนิทวงศ์ 17","zone":"Zone7","regional":"Regional 2","manager":"คุณ ธนกร วุฒิเดชเกรียงไกร"},{"num":"018","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสาทร 18","zone":"Zone8","regional":"Regional 2","manager":"คุณ ศุจิกา พงษากาล"},{"num":"019","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขานครปฐม 19","zone":"Zone6","regional":"Regional 2","manager":"คุณ ภกรณ์กาญจ์ เมทินีพิศาลกุล"},{"num":"020","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสุรินทร์ 20","zone":"Zone11","regional":"Regional 3","manager":"คุณ ณัฐวัฒน์ เดชโนนสังข์"},{"num":"021","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสามเสน 21","zone":"Zone7","regional":"Regional 2","manager":"คุณ ธนกร วุฒิเดชเกรียงไกร"},{"num":"022","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขานครศรีธรรมราช 22","zone":"Zone17","regional":"Regional 4","manager":"คุณ พงศิกร รังษีพลาสวัสดิ์"},{"num":"023","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเชียงราย 23","zone":"Zone1","regional":"Regional 1","manager":"คุณ พิชิต คันธาเวช"},{"num":"024","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสกลนคร 24","zone":"Zone3","regional":"Regional 1","manager":"คุณ มะลิวัลย์ โขงชัยภูมิ"},{"num":"025","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสุพรรณบุรี 25","zone":"Zone5","regional":"Regional 1","manager":"คุณ ลัดดาวัลย์ ธรรมศร"},{"num":"026","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาจันทบุรี 26","zone":"Zone14","regional":"Regional 3","manager":"คุณ รัตวัชร์ พงศ์วัจนาทิน"},{"num":"027","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาภูเก็ต 27","zone":"Zone16","regional":"Regional 4","manager":"คุณ บุษรา ไชยเสน"},{"num":"028","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาร้อยเอ็ด 28","zone":"Zone4","regional":"Regional 1","manager":"คุณ สุมาลี หาญสว่าง"},{"num":"029","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาตรัง 29","zone":"Zone17","regional":"Regional 4","manager":"คุณ พงศิกร รังษีพลาสวัสดิ์"},{"num":"030","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสระแก้ว 30","zone":"Zone12","regional":"Regional 3","manager":"คุณ พจนีย์ กลั่นเขตกิจ"},{"num":"031","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเกาะสมุย 31","zone":"Zone17","regional":"Regional 4","manager":"คุณ พงศิกร รังษีพลาสวัสดิ์"},{"num":"032","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาบุรีรัมย์ 32","zone":"Zone11","regional":"Regional 3","manager":"คุณ ณัฐวัฒน์ เดชโนนสังข์"},{"num":"033","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาศรีสะเกษ 33","zone":"Zone11","regional":"Regional 3","manager":"คุณ ณัฐวัฒน์ เดชโนนสังข์"},{"num":"034","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาลำพูน 34","zone":"Zone1","regional":"Regional 1","manager":"คุณ พิชิต คันธาเวช"},{"num":"035","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขากระบี่ 35","zone":"Zone16","regional":"Regional 4","manager":"คุณ บุษรา ไชยเสน"},{"num":"036","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเพชรบุรี 36","zone":"Zone15","regional":"Regional 3","manager":"คุณ วรรณิภา บุญจริง"},{"num":"037","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาชัยภูมิ 37","zone":"Zone4","regional":"Regional 1","manager":"คุณ สุมาลี หาญสว่าง"},{"num":"038","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสระบุรี 38","zone":"Zone5","regional":"Regional 1","manager":"คุณ ลัดดาวัลย์ ธรรมศร"},{"num":"039","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาปราณบุรี 39","zone":"Zone15","regional":"Regional 3","manager":"คุณ วรรณิภา บุญจริง"},{"num":"040","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาฉะเชิงเทรา 40","zone":"Zone13","regional":"Regional 3","manager":"คุณ เสถียร ผลขาว"},{"num":"041","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเชียงใหม่2 41","zone":"Zone1","regional":"Regional 1","manager":"คุณ พิชิต คันธาเวช"},{"num":"042","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขารามอินทรา 42","zone":"Zone9","regional":"Regional 2","manager":"คุณ เอกธัช นาวิกบุตร"},{"num":"043","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาชุมพร 43","zone":"Zone15","regional":"Regional 3","manager":"คุณ วรรณิภา บุญจริง"},{"num":"044","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาพัทยา 44","zone":"Zone14","regional":"Regional 3","manager":"คุณ รัตวัชร์ พงศ์วัจนาทิน"},{"num":"045","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขากำแพงเพชร 45","zone":"Zone2","regional":"Regional 1","manager":"คุณ ธีระพงษ์ อินจุ้มสาย"},{"num":"046","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขากาญจนบุรี 46","zone":"Zone6","regional":"Regional 2","manager":"คุณ ภกรณ์กาญจ์ เมทินีพิศาลกุล"},{"num":"047","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาลพบุรี 47","zone":"Zone5","regional":"Regional 1","manager":"คุณ ลัดดาวัลย์ ธรรมศร"},{"num":"048","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาหนองคาย 48","zone":"Zone3","regional":"Regional 1","manager":"คุณ มะลิวัลย์ โขงชัยภูมิ"},{"num":"049","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาราชบุรี 49","zone":"Zone6","regional":"Regional 2","manager":"คุณ ภกรณ์กาญจ์ เมทินีพิศาลกุล"},{"num":"050","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาแม่ริม 50","zone":"Zone1","regional":"Regional 1","manager":"คุณ พิชิต คันธาเวช"},{"num":"051","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาอยุธยา 51","zone":"Zone12","regional":"Regional 3","manager":"คุณ พจนีย์ กลั่นเขตกิจ"},{"num":"052","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาลำปาง 52","zone":"Zone2","regional":"Regional 1","manager":"คุณ ธีระพงษ์ อินจุ้มสาย"},{"num":"053","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาหัวหิน 53","zone":"Zone15","regional":"Regional 3","manager":"คุณ วรรณิภา บุญจริง"},{"num":"054","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาคลองหลวง 54","zone":"Zone12","regional":"Regional 3","manager":"คุณ พจนีย์ กลั่นเขตกิจ"},{"num":"055","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเลย 55","zone":"Zone3","regional":"Regional 1","manager":"คุณ มะลิวัลย์ โขงชัยภูมิ"},{"num":"056","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเพชรบูรณ์ 56","zone":"Zone5","regional":"Regional 1","manager":"คุณ ลัดดาวัลย์ ธรรมศร"},{"num":"057","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาบางพลี 57","zone":"Zone8","regional":"Regional 2","manager":"คุณ ศุจิกา พงษากาล"},{"num":"058","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขามุกดาหาร 58","zone":"Zone3","regional":"Regional 1","manager":"คุณ มะลิวัลย์ โขงชัยภูมิ"},{"num":"059","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสตูล 59","zone":"Zone17","regional":"Regional 4","manager":"คุณ พงศิกร รังษีพลาสวัสดิ์"},{"num":"060","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาตราด 60","zone":"Zone14","regional":"Regional 3","manager":"คุณ รัตวัชร์ พงศ์วัจนาทิน"},{"num":"061","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาชุมแพ 61","zone":"Zone4","regional":"Regional 1","manager":"คุณ สุมาลี หาญสว่าง"},{"num":"062","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาราไวย์ 62","zone":"Zone16","regional":"Regional 4","manager":"คุณ บุษรา ไชยเสน"},{"num":"063","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขานครพนม 63","zone":"Zone3","regional":"Regional 1","manager":"คุณ มะลิวัลย์ โขงชัยภูมิ"},{"num":"064","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเกาะพะงัน 64","zone":"Zone17","regional":"Regional 4","manager":"คุณ พงศิกร รังษีพลาสวัสดิ์"},{"num":"065","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาบึงกาฬ 65","zone":"Zone3","regional":"Regional 1","manager":"คุณ มะลิวัลย์ โขงชัยภูมิ"},{"num":"066","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาพัทยาเหนือ 66","zone":"Zone14","regional":"Regional 3","manager":"คุณ รัตวัชร์ พงศ์วัจนาทิน"},{"num":"067","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาแม่สาย 67","zone":"Zone1","regional":"Regional 1","manager":"คุณ พิชิต คันธาเวช"},{"num":"068","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาศาลายา 68","zone":"Zone6","regional":"Regional 2","manager":"คุณ ภกรณ์กาญจ์ เมทินีพิศาลกุล"},{"num":"069","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาพัทลุง 69","zone":"Zone16","regional":"Regional 4","manager":"คุณ บุษรา ไชยเสน"},{"num":"070","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสุโขทัย 70","zone":"Zone2","regional":"Regional 1","manager":"คุณ ธีระพงษ์ อินจุ้มสาย"},{"num":"071","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาป่าตอง 71","zone":"Zone16","regional":"Regional 4","manager":"คุณ บุษรา ไชยเสน"},{"num":"072","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสมุทรสาคร 72","zone":"Zone6","regional":"Regional 2","manager":"คุณ ภกรณ์กาญจ์ เมทินีพิศาลกุล"},{"num":"073","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาแม่สอด 73","zone":"Zone2","regional":"Regional 1","manager":"คุณ ธีระพงษ์ อินจุ้มสาย"},{"num":"074","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาปากช่อง 74","zone":"Zone5","regional":"Regional 1","manager":"คุณ ลัดดาวัลย์ ธรรมศร"},{"num":"075","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาถลาง 75","zone":"Zone16","regional":"Regional 4","manager":"คุณ บุษรา ไชยเสน"},{"num":"076","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาระนอง 76","zone":"Zone15","regional":"Regional 3","manager":"คุณ วรรณิภา บุญจริง"},{"num":"077","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาละไม 77","zone":"Zone17","regional":"Regional 4","manager":"คุณ พงศิกร รังษีพลาสวัสดิ์"},{"num":"078","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขากัลปพฤกษ์ 78","zone":"Zone8","regional":"Regional 2","manager":"คุณ ศุจิกา พงษากาล"},{"num":"079","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขายโสธร 79","zone":"Zone4","regional":"Regional 1","manager":"คุณ สุมาลี หาญสว่าง"},{"num":"080","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขามหาสารคาม 80","zone":"Zone4","regional":"Regional 1","manager":"คุณ สุมาลี หาญสว่าง"},{"num":"081","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาฝาง 81","zone":"Zone1","regional":"Regional 1","manager":"คุณ พิชิต คันธาเวช"},{"num":"082","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขานครนายก 82","zone":"Zone12","regional":"Regional 3","manager":"คุณ พจนีย์ กลั่นเขตกิจ"},{"num":"083","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขานครอินทร์ 83","zone":"Zone7","regional":"Regional 2","manager":"คุณ ธนกร วุฒิเดชเกรียงไกร"},{"num":"084","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาบ้านเพ 84","zone":"Zone14","regional":"Regional 3","manager":"คุณ รัตวัชร์ พงศ์วัจนาทิน"},{"num":"085","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาทุ่งสง 85","zone":"Zone17","regional":"Regional 4","manager":"คุณ พงศิกร รังษีพลาสวัสดิ์"},{"num":"086","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาศรีนครินทร์2 86","zone":"Zone10","regional":"Regional 2","manager":"คุณ อารีย์ นิ่มกลาง"},{"num":"087","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาพะเยา 87","zone":"Zone1","regional":"Regional 1","manager":"คุณ พิชิต คันธาเวช"},{"num":"089","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาพิษณุโลก2 89","zone":"Zone2","regional":"Regional 1","manager":"คุณ ธีระพงษ์ อินจุ้มสาย"},{"num":"096","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาทาวน์อินทาวน์ 96","zone":"Zone10","regional":"Regional 2","manager":"คุณ อารีย์ นิ่มกลาง"},{"num":"100","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาแพร่ 100","zone":"Zone2","regional":"Regional 1","manager":"คุณ ธีระพงษ์ อินจุ้มสาย"},{"num":"101","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเกาะช้าง 101","zone":"Zone14","regional":"Regional 3","manager":"คุณ รัตวัชร์ พงศ์วัจนาทิน"},{"num":"102","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขานครราชสีมา2 102","zone":"Zone11","regional":"Regional 3","manager":"คุณ ณัฐวัฒน์ เดชโนนสังข์"},{"num":"103","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาน่าน 103","zone":"Zone2","regional":"Regional 1","manager":"คุณ ธีระพงษ์ อินจุ้มสาย"},{"num":"104","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาอ่าวนาง 104","zone":"Zone16","regional":"Regional 4","manager":"คุณ บุษรา ไชยเสน"},{"num":"105","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขากะรน 105","zone":"Zone16","regional":"Regional 4","manager":"คุณ บุษรา ไชยเสน"},{"num":"106","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาวารินชำราบ 106","zone":"Zone11","regional":"Regional 3","manager":"คุณ ณัฐวัฒน์ เดชโนนสังข์"},{"num":"107","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาหนองบัวลำภู 107","zone":"Zone3","regional":"Regional 1","manager":"คุณ มะลิวัลย์ โขงชัยภูมิ"},{"num":"108","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาหนองจอก 108","zone":"Zone13","regional":"Regional 3","manager":"คุณ เสถียร ผลขาว"},{"num":"109","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาแหลมฉบัง 109","zone":"Zone13","regional":"Regional 3","manager":"คุณ เสถียร ผลขาว"},{"num":"110","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาประจวบคีรีขันธ์ 110","zone":"Zone15","regional":"Regional 3","manager":"คุณ วรรณิภา บุญจริง"},{"num":"111","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเพชรเกษม 111","zone":"Zone6","regional":"Regional 2","manager":"คุณ ภกรณ์กาญจ์ เมทินีพิศาลกุล"},{"num":"112","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาบางปู 112","zone":"Zone8","regional":"Regional 2","manager":"คุณ ศุจิกา พงษากาล"},{"num":"113","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาวังหิน 113","zone":"Zone9","regional":"Regional 2","manager":"คุณ เอกธัช นาวิกบุตร"},{"num":"114","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสิงห์บุรี 114","zone":"Zone5","regional":"Regional 1","manager":"คุณ ลัดดาวัลย์ ธรรมศร"},{"num":"115","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาบางบัวทอง 115","zone":"Zone7","regional":"Regional 2","manager":"คุณ ธนกร วุฒิเดชเกรียงไกร"},{"num":"116","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขากาฬสินธุ์ 116","zone":"Zone4","regional":"Regional 1","manager":"คุณ สุมาลี หาญสว่าง"},{"num":"117","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาอุดมสุข 117","zone":"Zone10","regional":"Regional 2","manager":"คุณ อารีย์ นิ่มกลาง"},{"num":"118","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขารามคำแหง(สัมมากร) 118","zone":"Zone9","regional":"Regional 2","manager":"คุณ เอกธัช นาวิกบุตร"},{"num":"119","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาพิจิตร 119","zone":"Zone5","regional":"Regional 1","manager":"คุณ ลัดดาวัลย์ ธรรมศร"},{"num":"120","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาปทุมธานี 120","zone":"Zone7","regional":"Regional 2","manager":"คุณ ธนกร วุฒิเดชเกรียงไกร"},{"num":"121","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาบดินทรเดชา 121","zone":"Zone9","regional":"Regional 2","manager":"คุณ เอกธัช นาวิกบุตร"},{"num":"122","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาประชาอุทิศ 122","zone":"Zone8","regional":"Regional 2","manager":"คุณ ศุจิกา พงษากาล"},{"num":"123","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสุขุมวิท71 123","zone":"Zone8","regional":"Regional 2","manager":"คุณ ศุจิกา พงษากาล"},{"num":"124","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขานวมินทร์70 124","zone":"Zone9","regional":"Regional 2","manager":"คุณ เอกธัช นาวิกบุตร"},{"num":"125","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาชะอำ 125","zone":"Zone15","regional":"Regional 3","manager":"คุณ วรรณิภา บุญจริง"},{"num":"126","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาอ่อนนุช 126","zone":"Zone10","regional":"Regional 2","manager":"คุณ อารีย์ นิ่มกลาง"},{"num":"127","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสุขสวัสดิ์ 127","zone":"Zone8","regional":"Regional 2","manager":"คุณ ศุจิกา พงษากาล"},{"num":"128","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขากบินทร์บุรี 128","zone":"Zone12","regional":"Regional 3","manager":"คุณ พจนีย์ กลั่นเขตกิจ"},{"num":"129","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาลาดกระบัง 129","zone":"Zone13","regional":"Regional 3","manager":"คุณ เสถียร ผลขาว"},{"num":"130","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขานาทองเจริญ 130","zone":"Zone12","regional":"Regional 3","manager":"คุณ พจนีย์ กลั่นเขตกิจ"},{"num":"131","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาบ่อวิน 131","zone":"Zone14","regional":"Regional 3","manager":"คุณ รัตวัชร์ พงศ์วัจนาทิน"},{"num":"132","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสัตหีบ 132","zone":"Zone14","regional":"Regional 3","manager":"คุณ รัตวัชร์ พงศ์วัจนาทิน"},{"num":"133","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขารามคำแหง24 133","zone":"Zone10","regional":"Regional 2","manager":"คุณ อารีย์ นิ่มกลาง"},{"num":"134","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาอมตะนคร 134","zone":"Zone13","regional":"Regional 3","manager":"คุณ เสถียร ผลขาว"},{"num":"135","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาบางคอแหลม 135","zone":"Zone8","regional":"Regional 2","manager":"คุณ ศุจิกา พงษากาล"},{"num":"136","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาขอนแก่น2 136","zone":"Zone4","regional":"Regional 1","manager":"คุณ สุมาลี หาญสว่าง"},{"num":"137","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาวงศกร2 137","zone":"Zone10","regional":"Regional 2","manager":"คุณ อารีย์ นิ่มกลาง"},{"num":"138","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเหม่งจ๋าย 138","zone":"Zone10","regional":"Regional 2","manager":"คุณ อารีย์ นิ่มกลาง"},{"num":"139","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสุขุมวิท22 139","zone":"Zone10","regional":"Regional 2","manager":"คุณ อารีย์ นิ่มกลาง"},{"num":"140","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาถนนจันทน์ 140","zone":"Zone7","regional":"Regional 2","manager":"คุณ ธนกร วุฒิเดชเกรียงไกร"},{"num":"141","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาลำลูกกา 141","zone":"Zone12","regional":"Regional 3","manager":"คุณ พจนีย์ กลั่นเขตกิจ"},{"num":"142","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาแพรกษา 142","zone":"Zone8","regional":"Regional 2","manager":"คุณ ศุจิกา พงษากาล"},{"num":"143","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาประดิษฐ์มนูธรรม 143","zone":"Zone9","regional":"Regional 2","manager":"คุณ เอกธัช นาวิกบุตร"},{"num":"144","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาตลาดรุ่งโรจน์(คลอง4) 144","zone":"Zone12","regional":"Regional 3","manager":"คุณ พจนีย์ กลั่นเขตกิจ"},{"num":"145","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาพงษ์เพชร 145","zone":"Zone7","regional":"Regional 2","manager":"คุณ ธนกร วุฒิเดชเกรียงไกร"},{"num":"146","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาอุตรดิตถ์ 146","zone":"Zone2","regional":"Regional 1","manager":"คุณ ธีระพงษ์ อินจุ้มสาย"},{"num":"147","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเมืองทอง 147","zone":"Zone9","regional":"Regional 2","manager":"คุณ เอกธัช นาวิกบุตร"},{"num":"148","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเลียบคลอง2 148","zone":"Zone13","regional":"Regional 3","manager":"คุณ เสถียร ผลขาว"},{"num":"149","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาอ้อมน้อย 149","zone":"Zone6","regional":"Regional 2","manager":"คุณ ภกรณ์กาญจ์ เมทินีพิศาลกุล"},{"num":"150","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสนามบินน้ำ 150","zone":"Zone7","regional":"Regional 2","manager":"คุณ ธนกร วุฒิเดชเกรียงไกร"},{"num":"151","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเทพรักษ์ 151","zone":"Zone9","regional":"Regional 2","manager":"คุณ เอกธัช นาวิกบุตร"},{"num":"152","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสมุทรสงคราม 152","zone":"Zone6","regional":"Regional 2","manager":"คุณ ภกรณ์กาญจ์ เมทินีพิศาลกุล"},{"num":"153","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเวียงสระ 153","zone":"Zone17","regional":"Regional 4","manager":"คุณ พงศิกร รังษีพลาสวัสดิ์"},{"num":"154","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาปราจีนบุรี 154","zone":"Zone12","regional":"Regional 3","manager":"คุณ พจนีย์ กลั่นเขตกิจ"},{"num":"155","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาปิ่นเกล้า 155","zone":"Zone7","regional":"Regional 2","manager":"คุณ ธนกร วุฒิเดชเกรียงไกร"},{"num":"156","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสมุทรปราการ 156","zone":"Zone8","regional":"Regional 2","manager":"คุณ ศุจิกา พงษากาล"},{"num":"157","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขานครราชสีมา3 (เซฟวัน) 157","zone":"Zone11","regional":"Regional 3","manager":"คุณ ณัฐวัฒน์ เดชโนนสังข์"},{"num":"158","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขานครสวรรค์ 2 (พรหมนิมิต) 158","zone":"Zone5","regional":"Regional 1","manager":"คุณ ลัดดาวัลย์ ธรรมศร"},{"num":"159","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาอุดรธานี 2 (บ้านเลื่อม) 159","zone":"Zone3","regional":"Regional 1","manager":"คุณ มะลิวัลย์ โขงชัยภูมิ"},{"num":"160","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขามหาชัย 160","zone":"Zone6","regional":"Regional 2","manager":"คุณ ภกรณ์กาญจ์ เมทินีพิศาลกุล"},{"num":"161","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาขอนแก่น3 (บ้านโนนม่วง) 161","zone":"Zone4","regional":"Regional 1","manager":"คุณ สุมาลี หาญสว่าง"},{"num":"162","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาอมตะนคร 2 162","zone":"Zone13","regional":"Regional 3","manager":"คุณ เสถียร ผลขาว"},{"num":"163","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสงขลา 163","zone":"Zone17","regional":"Regional 4","manager":"คุณ พงศิกร รังษีพลาสวัสดิ์"},{"num":"164","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาชัยนาท 164","zone":"Zone5","regional":"Regional 1","manager":"คุณ ลัดดาวัลย์ ธรรมศร"},{"num":"165","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาถนนศรีอยุธยา 165","zone":"Zone10","regional":"Regional 2","manager":"คุณ อารีย์ นิ่มกลาง"},{"num":"166","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาราไวย์ 2 166","zone":"Zone16","regional":"Regional 4","manager":"คุณ บุษรา ไชยเสน"},{"num":"167","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเชียงใหม่ (จอมทอง) 167","zone":"Zone1","regional":"Regional 1","manager":"คุณ พิชิต คันธาเวช"},{"num":"168","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาบ้านบึง (ชลบุรี) 168","zone":"Zone13","regional":"Regional 3","manager":"คุณ เสถียร ผลขาว"},{"num":"169","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาพังงา 169","zone":"Zone15","regional":"Regional 3","manager":"คุณ วรรณิภา บุญจริง"},{"num":"170","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาอำนาจเจริญ 170","zone":"Zone11","regional":"Regional 3","manager":"คุณ ณัฐวัฒน์ เดชโนนสังข์"},{"num":"171","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาจอหอ (นครราชสีมา) 171","zone":"Zone11","regional":"Regional 3","manager":"คุณ ณัฐวัฒน์ เดชโนนสังข์"},{"num":"172","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาบ้านไผ่ 172","zone":"Zone4","regional":"Regional 1","manager":"คุณ สุมาลี หาญสว่าง"},{"num":"175","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาแฮปปี้แทท (ฟอเรสเทียส์ - บางนา) 175","zone":"Zone8","regional":"Regional 2","manager":"คุณ ศุจิกา พงษากาล"},{"num":"301","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาพระราม4 301","zone":"Zone7","regional":"Regional 2","manager":"คุณ ธนกร วุฒิเดชเกรียงไกร"},{"num":"303","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาศิริมังคลาจารย์ 303","zone":"Zone1","regional":"Regional 1","manager":"คุณ พิชิต คันธาเวช"}];
+
+const WF_TEMPLATE = [
+  {sec:"Fresh Food",id:"fv",label:"Fruit & Vegetable (FV)",plan:0,actual:0,remark:""},
+  {sec:"Fresh Food",id:"but",label:"Butchery (BUT)",plan:0,actual:0,remark:""},
+  {sec:"Fresh Food",id:"fish",label:"Fish",plan:0,actual:0,remark:""},
+  {sec:"Fresh Food",id:"bakery",label:"Bakery",plan:0,actual:0,remark:""},
+  {sec:"Fresh Food",id:"frozen",label:"Frozen & Dairy",plan:0,actual:0,remark:""},
+  {sec:"Dry Food",id:"dry",label:"Total : Dry Food",plan:0,actual:0,remark:""},
+  {sec:"Non Food",id:"nf",label:"Total : Non Food",plan:0,actual:0,remark:""},
+  {sec:"Operations",id:"o2o_picker",label:"Picker / Packer",plan:0,actual:0,remark:"",isO2OSub:true},
+  {sec:"Operations",id:"o2o_loader",label:"Loader",plan:0,actual:0,remark:"",isO2OSub:true},
+  {sec:"Operations",id:"o2o_driver",label:"Driver",plan:0,actual:0,remark:"",isO2OSub:true},
+  {sec:"Operations",id:"o2o_admin",label:"Admin O2O",plan:0,actual:0,remark:"",isO2OSub:true},
+  {sec:"Operations",id:"o2o",label:"Total : O2O",plan:0,actual:0,remark:"",isO2OTotal:true},
+  {sec:"Operations",id:"gr",label:"GR",plan:0,actual:0,remark:""},
+  {sec:"Operations",id:"ga",label:"GA",plan:0,actual:0,remark:""},
+  {sec:"Operations",id:"cs",label:"CS (Cashier)",plan:0,actual:0,remark:""},
+  {sec:"Operations",id:"oos",label:"OOS",plan:0,actual:0,remark:""},
+  {sec:"Operations",id:"safety",label:"Safety",plan:0,actual:0,remark:""}
+];
+
+// STATE
+let selBranch = null;
+let wfRows = [];
+let records = [];
+let delId = null;
+let chReg = null, chRate = null, chZone = null, chBranch = null;
+let dbRef = null;
+
+// FIREBASE INIT
+const firebaseConfig = {
+  apiKey: "AIzaSyBaxbxF5aKnHXGAAqBHEEiq5oCzhYzxgMg",
+  authDomain: "shift-schedule-a168a.firebaseapp.com",
+  databaseURL: "https://shift-schedule-a168a-default-rtdb.firebaseio.com",
+  projectId: "shift-schedule-a168a",
+  storageBucket: "shift-schedule-a168a.firebasestorage.app",
+  messagingSenderId: "500545868243",
+  appId: "1:500545868243:web:b6d81788b4c0a99b071f26",
+  measurementId: "G-K7JJZPVDD2"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+dbRef = db.ref('records');
+
+// INIT
+function init() {
+  const now = new Date();
+  document.getElementById('today-lbl').textContent = now.toLocaleDateString('th-TH',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const ds = now.toISOString().split('T')[0];
+  document.getElementById('rec-date').value = ds;
+  document.getElementById('h-from').value = ds;
+  document.getElementById('h-to').value = ds;
+  document.getElementById('d-from').value = ds.slice(0,7)+'-01';
+  document.getElementById('d-to').value = ds;
+  buildFilters();
+  renderBranchGrid(BRANCHES);
+  bindAll();
+  showFbStatus('loading');
+  // Firebase Realtime Database - listen to all records (real-time sync)
+  db.ref('records').orderByChild('date').on('value', (snap) => {
+    records = [];
+    snap.forEach(child => { records.push({...child.val(), _fbKey: child.key}); });
+    records.sort((a,b) => b.id - a.id);
+    renderHistory();
+    const pg = document.querySelector('.page.active');
+    if (pg && pg.id==='page-dashboard') renderDashboard();
+    showFbStatus('online');
+  }, (err) => {
+    console.error('Firebase error:', err);
+    records = JSON.parse(localStorage.getItem('wf_v2') || '[]');
+    renderHistory();
+    showFbStatus('offline');
+    toast('⚠️ ไม่สามารถเชื่อมต่อ Firebase - ใช้ข้อมูลในเครื่องชั่วคราว', 'err');
+  });
+}
+
+function showFbStatus(status) {
+  const el = document.getElementById('fb-status');
+  if (!el) return;
+  if (status==='loading') { el.textContent='🔄 กำลังเชื่อมต่อ...'; el.style.color='#D97706'; }
+  else if (status==='online') { el.textContent='🟢 เชื่อมต่อ Firebase'; el.style.color='#059669'; }
+  else { el.textContent='🔴 Offline (ข้อมูลในเครื่อง)'; el.style.color='#DC2626'; }
+}
+
+function buildFilters() {
+  const regs = [...new Set(BRANCHES.map(b=>b.regional))].sort();
+  const zones = [...new Set(BRANCHES.map(b=>b.zone))].sort((a,b)=>+a.replace('Zone','')-+b.replace('Zone',''));
+
+  // Record page & history: regional selects
+  ['b-regional','h-regional'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    regs.forEach(r => { const o=document.createElement('option');o.value=r;o.textContent=r;el.appendChild(o); });
+  });
+  // Record page & history: zone selects (static, not cascaded)
+  ['b-zone','h-zone'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    zones.forEach(z => { const o=document.createElement('option');o.value=z;o.textContent=z;el.appendChild(o); });
+  });
+
+  // Dashboard Regional selects (d-zone-reg, d-br-reg)
+  ['d-zone-reg','d-br-reg'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    regs.forEach(r => { const o=document.createElement('option');o.value=r;o.textContent=r;el.appendChild(o); });
+  });
+
+  // History branch select
+  const hb = document.getElementById('h-branch');
+  BRANCHES.forEach(b => {
+    const o=document.createElement('option');
+    o.value=b.num;
+    o.textContent=b.num+' - '+b.name.replace('บมจ.ซีพี แอ็กซ์ตร้า สาขา','');
+    hb.appendChild(o);
+  });
+
+  // Dashboard branch-tab: populate zone initially (all zones)
+  rebuildZoneSelect('d-br-zone', '');
+}
+
+// Rebuild zone dropdown based on selected regional
+function rebuildZoneSelect(selectId, regional) {
+  const el = document.getElementById(selectId);
+  if (!el) return;
+  const prev = el.value;
+  const filtered = regional ? BRANCHES.filter(b=>b.regional===regional) : BRANCHES;
+  const zones = [...new Set(filtered.map(b=>b.zone))].sort((a,b)=>+a.replace('Zone','')-+b.replace('Zone',''));
+  el.innerHTML = '<option value="">— Zone ทั้งหมด —</option>';
+  zones.forEach(z => { const o=document.createElement('option');o.value=z;o.textContent=z;el.appendChild(o); });
+  if (prev && zones.includes(prev)) el.value = prev;
+}
+
+// Rebuild branch-chart dropdown based on regional+zone filter on top of data
+function rebuildBranchChartSel(f, regional, zone) {
+  const sel = document.getElementById('br-chart-sel');
+  const prev = sel.value;
+  let fd = f;
+  if (regional) fd = fd.filter(r=>r.regional===regional);
+  if (zone) fd = fd.filter(r=>r.zone===zone);
+  const g = groupBy(fd,'branchNum');
+  sel.innerHTML = '<option value="">— เลือกสาขา —</option>';
+  Object.keys(g).sort().forEach(num=>{
+    const o=document.createElement('option');
+    o.value=num; o.textContent=num+' — '+g[num][0].branchName.replace('บมจ.ซีพี แอ็กซ์ตร้า สาขา','');
+    sel.appendChild(o);
+  });
+  if (prev && sel.querySelector('option[value="'+prev+'"]')) {
+    sel.value = prev;
+    drawBranchChart(fd, prev);
+  } else {
+    document.getElementById('br-chart-body').style.display='none';
+    document.getElementById('br-chart-empty').style.display='flex';
+  }
+}
+
+// BRANCH GRID
+function renderBranchGrid(list) {
+  const g = document.getElementById('b-grid');
+  g.innerHTML = '';
+  if (!list.length) { g.innerHTML='<div style="padding:16px;color:var(--tx2)">ไม่พบสาขา</div>'; return; }
+  list.forEach(b => {
+    const d = document.createElement('div');
+    d.className = 'bc' + (selBranch && selBranch.num===b.num ? ' sel' : '');
+    const shortName = b.name.replace('บมจ.ซีพี แอ็กซ์ตร้า สาขา','');
+    d.innerHTML = '<div class="ln">'+b.num+'</div><div class="lname">'+shortName+'</div><div class="lz">'+b.zone+' · '+b.regional+'</div>';
+    d.onclick = () => selectBranch(b);
+    g.appendChild(d);
+  });
+}
+
+function filterBranches() {
+  const q = document.getElementById('b-search').value.toLowerCase().trim();
+  const reg = document.getElementById('b-regional').value;
+  const zone = document.getElementById('b-zone').value;
+  const list = BRANCHES.filter(b => {
+    if (q && !b.num.includes(q) && !b.name.toLowerCase().includes(q)) return false;
+    if (reg && b.regional!==reg) return false;
+    if (zone && b.zone!==zone) return false;
+    return true;
+  });
+  renderBranchGrid(list);
+}
+
+function selectBranch(b) {
+  selBranch = b;
+  wfRows = JSON.parse(JSON.stringify(WF_TEMPLATE));
+  document.getElementById('step1').style.display = 'none';
+  document.getElementById('step2').style.display = 'block';
+  document.getElementById('sel-badge').textContent = b.num;
+  document.getElementById('sel-name').textContent = b.name.replace('บมจ.ซีพี แอ็กซ์ตร้า สาขา','');
+  document.getElementById('sel-detail').textContent = b.zone+' · '+b.regional+' · '+b.manager;
+  document.getElementById('wf-lbl').textContent = 'สาขา '+b.num;
+  const date = document.getElementById('rec-date').value;
+  const time = document.getElementById('rec-time').value;
+  document.getElementById('wf-date-badge').textContent = fmtDate(date);
+  document.getElementById('wf-time-badge').textContent = '⏰ '+time;
+  renderWFTable();
+}
+
+// WF TABLE
+function renderWFTable() {
+  const con = document.getElementById('wf-container');
+  const COLS = '2fr 90px 90px 80px 1fr';
+  const secs = [...new Set(wfRows.map(r=>r.sec))];
+  let html = '<div class="wf-row" style="grid-template-columns:'+COLS+';background:#F8FAFC;border-bottom:1px solid var(--bdr)">'
+    +'<div class="wf-cell" style="font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px">ประเภทกำลังคน</div>'
+    +'<div class="wf-cell tr" style="font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase">ตามตารางกะ</div>'
+    +'<div class="wf-cell tr" style="font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase">มาทำงานจริง</div>'
+    +'<div class="wf-cell tr" style="font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase">ขาด/เกิน</div>'
+    +'<div class="wf-cell" style="font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase">หมายเหตุ</div>'
+    +'</div>';
+
+  secs.forEach(sec => {
+    const rows = wfRows.filter(r=>r.sec===sec);
+    html += '<div class="wf-sec-hd">'+sec+'</div>';
+    rows.forEach(row => {
+      const idx = wfRows.indexOf(row);
+      const diff = (row.actual||0)-(row.plan||0);
+      const dc = diff<0?'diff-n':diff>0?'diff-p':'diff-z';
+      const dt = diff>0?'+'+diff:diff;
+
+      if (row.isO2OTotal) {
+        html += '<div class="wf-row wf-total" style="grid-template-columns:'+COLS+';background:#FFF9C4;border-top:2px solid #F9A825">'
+          +'<div class="wf-cell fw6" style="color:#5D4037">'+esc(row.label)+'</div>'
+          +'<div class="wf-cell tr fw6" id="o2o-tp">'+(row.plan||0)+'</div>'
+          +'<div class="wf-cell tr fw6" id="o2o-ta">'+(row.actual||0)+'</div>'
+          +'<div class="wf-cell tr fw6 '+dc+'" id="d'+idx+'">'+dt+'</div>'
+          +'<div class="wf-cell"></div>'
+          +'</div>';
+      } else if (row.isO2OSub) {
+        html += '<div class="wf-row" style="grid-template-columns:'+COLS+';background:#FFFDE7">'
+          +'<div class="wf-cell"><input class="le" value="'+esc(row.label)+'" data-f="label" data-i="'+idx+'" style="color:#E65100;font-weight:500"></div>'
+          +'<div class="wf-cell tr"><input class="ie" type="number" min="0" value="'+(row.plan||0)+'" data-f="plan" data-i="'+idx+'" style="border-color:#F9A825"></div>'
+          +'<div class="wf-cell tr"><input class="ie" type="number" min="0" value="'+(row.actual||0)+'" data-f="actual" data-i="'+idx+'" style="border-color:#F9A825"></div>'
+          +'<div class="wf-cell tr '+dc+'" id="d'+idx+'">'+dt+'</div>'
+          +'<div class="wf-cell"><input class="le" value="'+esc(row.remark)+'" data-f="remark" data-i="'+idx+'" placeholder="หมายเหตุ..."></div>'
+          +'</div>';
+      } else {
+        html += '<div class="wf-row" style="grid-template-columns:'+COLS+'">'
+          +'<div class="wf-cell"><input class="le" value="'+esc(row.label)+'" data-f="label" data-i="'+idx+'"></div>'
+          +'<div class="wf-cell tr"><input class="ie" type="number" min="0" value="'+(row.plan||0)+'" data-f="plan" data-i="'+idx+'"></div>'
+          +'<div class="wf-cell tr"><input class="ie" type="number" min="0" value="'+(row.actual||0)+'" data-f="actual" data-i="'+idx+'"></div>'
+          +'<div class="wf-cell tr '+dc+'" id="d'+idx+'">'+dt+'</div>'
+          +'<div class="wf-cell"><input class="le" value="'+esc(row.remark)+'" data-f="remark" data-i="'+idx+'" placeholder="หมายเหตุ..."></div>'
+          +'</div>';
+      }
+    });
+  });
+
+  const tp = wfRows.reduce((s,r)=>s+(r.isO2OSub?0:(+r.plan||0)),0);
+  const ta = wfRows.reduce((s,r)=>s+(r.isO2OSub?0:(+r.actual||0)),0);
+  const td = ta-tp;
+  const tdc = td<0?'diff-n':td>0?'diff-p':'diff-z';
+  html += '<div class="wf-row wf-total" style="grid-template-columns:'+COLS+'">'
+    +'<div class="wf-cell">Grand Total</div>'
+    +'<div class="wf-cell tr fw6" id="tp">'+tp+'</div>'
+    +'<div class="wf-cell tr fw6" id="ta">'+ta+'</div>'
+    +'<div class="wf-cell tr fw6 '+tdc+'" id="td">'+(td>0?'+'+td:td)+'</div>'
+    +'<div class="wf-cell"></div>'
+    +'</div>';
+
+  con.innerHTML = html;
+  updO2OTotal();
+
+  con.querySelectorAll('input[data-f]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const idx = +inp.dataset.i;
+      const f = inp.dataset.f;
+      if (f==='plan'||f==='actual') wfRows[idx][f] = +inp.value||0;
+      else wfRows[idx][f] = inp.value;
+      updDiff(idx);
+      updTotals();
+    });
+  });
+}
+
+function updDiff(idx) {
+  const el = document.getElementById('d'+idx);
+  if (!el) return;
+  const diff = (wfRows[idx].actual||0)-(wfRows[idx].plan||0);
+  el.textContent = diff>0?'+'+diff:diff;
+  el.className = 'wf-cell tr '+(diff<0?'diff-n':diff>0?'diff-p':'diff-z');
+  // If editing an O2O sub-row, update Total O2O
+  if (wfRows[idx].isO2OSub) updO2OTotal();
+}
+
+function updO2OTotal() {
+  // Sum all O2O sub rows
+  const subs = wfRows.filter(r=>r.isO2OSub);
+  const totRow = wfRows.find(r=>r.isO2OTotal);
+  if (!totRow) return;
+  const sp = subs.reduce((s,r)=>s+(+r.plan||0),0);
+  const sa = subs.reduce((s,r)=>s+(+r.actual||0),0);
+  totRow.plan = sp;
+  totRow.actual = sa;
+  const elTp = document.getElementById('o2o-tp');
+  const elTa = document.getElementById('o2o-ta');
+  if (elTp) elTp.textContent = sp;
+  if (elTa) elTa.textContent = sa;
+  const diff = sa - sp;
+  const totIdx = wfRows.indexOf(totRow);
+  const elD = document.getElementById('d'+totIdx);
+  if (elD) {
+    elD.textContent = diff>0?'+'+diff:diff;
+    elD.className = 'wf-cell tr fw6 '+(diff<0?'diff-n':diff>0?'diff-p':'diff-z');
+  }
+}
+
+function updTotals() {
+  // Grand total excludes O2O sub-rows (use Total O2O instead to avoid double count)
+  const tp = wfRows.reduce((s,r)=>s+(r.isO2OSub?0:(+r.plan||0)),0);
+  const ta = wfRows.reduce((s,r)=>s+(r.isO2OSub?0:(+r.actual||0)),0);
+  const td = ta-tp;
+  document.getElementById('tp').textContent = tp;
+  document.getElementById('ta').textContent = ta;
+  const el = document.getElementById('td');
+  el.textContent = td>0?'+'+td:td;
+  el.className = 'wf-cell tr fw6 '+(td<0?'diff-n':td>0?'diff-p':'diff-z');
+}
+
+// SAVE
+function saveRecord() {
+  if (currentUser && currentUser.role !== 'admin') {
+    toast('⚠️ คุณไม่มีสิทธิ์บันทึกข้อมูล', 'err'); return;
+  }
+  if (!selBranch) { toast('กรุณาเลือกสาขาก่อน','err'); return; }
+  const date = document.getElementById('rec-date').value;
+  const time = document.getElementById('rec-time').value;
+  if (!date) { toast('กรุณาเลือกวันที่','err'); return; }
+  // Exclude O2O sub-rows from grand total (O2O Total row already sums them)
+  const tp = wfRows.reduce((s,r)=>s+(r.isO2OSub?0:(+r.plan||0)),0);
+  const ta = wfRows.reduce((s,r)=>s+(r.isO2OSub?0:(+r.actual||0)),0);
+  const rec = {
+    id: Date.now(), date, time,
+    branchNum: selBranch.num, branchName: selBranch.name,
+    zone: selBranch.zone, regional: selBranch.regional, manager: selBranch.manager,
+    totalPlan: tp, totalActual: ta, diff: ta-tp,
+    rows: JSON.parse(JSON.stringify(wfRows))
+  };
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
+  db.ref('records').push(rec)
+    .then(() => {
+      toast('✅ บันทึกสาขา '+selBranch.num+' เรียบร้อย','ok');
+      localStorage.setItem('wf_v2', JSON.stringify(records));
+    })
+    .catch(err => {
+      console.error(err);
+      records.unshift(rec);
+      localStorage.setItem('wf_v2', JSON.stringify(records));
+      renderHistory();
+      toast('⚠️ บันทึกในเครื่องชั่วคราว (Firebase ไม่ตอบสนอง)','err');
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>บันทึกข้อมูล';
+    });
+}
+
+// HISTORY
+function renderHistory() {
+  const from = document.getElementById('h-from').value;
+  const to = document.getElementById('h-to').value;
+  const reg = document.getElementById('h-regional').value;
+  const zone = document.getElementById('h-zone').value;
+  const bNum = document.getElementById('h-branch').value;
+  const f = records.filter(r => {
+    if (from && r.date<from) return false;
+    if (to && r.date>to) return false;
+    if (reg && r.regional!==reg) return false;
+    if (zone && r.zone!==zone) return false;
+    if (bNum && r.branchNum!==bNum) return false;
+    return true;
+  });
+  document.getElementById('h-count').textContent = f.length+' รายการ';
+  const tbody = document.getElementById('h-tbody');
+  const empty = document.getElementById('h-empty');
+  if (!f.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display = 'none';
+  let rows = '';
+  f.forEach(r => {
+    const dc = r.diff<0?'tc-err':r.diff>0?'tc-ok':'';
+    const dt = r.diff>0?'+'+r.diff:r.diff;
+    const rate = r.totalPlan ? (r.totalActual/r.totalPlan*100).toFixed(1)+'%' : '—';
+    const rid = 'row-'+r.id;
+    // Main summary row
+    rows += '<tr style="cursor:pointer" onclick="toggleDetail(\''+rid+'\')">';
+    rows += '<td><span style="font-size:10px;color:var(--tx3);margin-right:4px" id="arr-'+rid+'">▶</span>'+fmtDate(r.date)+'</td>';
+    rows += '<td><span class="chip c-info">'+r.time+'</span></td>';
+    rows += '<td class="fw6">'+r.branchNum+'</td>';
+    rows += '<td>'+r.branchName.replace('บมจ.ซีพี แอ็กซ์ตร้า สาขา','')+'</td>';
+    rows += '<td>'+r.zone+'</td><td>'+r.regional+'</td>';
+    rows += '<td class="tr">'+(r.totalPlan||0).toLocaleString()+'</td>';
+    rows += '<td class="tr">'+(r.totalActual||0).toLocaleString()+'</td>';
+    rows += '<td class="tr '+dc+'">'+dt+'</td>';
+    rows += '<td class="tr">'+rate+'</td>';
+    rows += (currentUser && currentUser.role==='admin'
+      ? '<td><button class="btn btn-outline btn-sm" style="color:var(--err);border-color:var(--err)" onclick="event.stopPropagation();askDel('+r.id+')">ลบ</button></td>'
+      : '<td></td>');
+    rows += '</tr>';
+    // Detail expand row
+    rows += '<tr id="'+rid+'" style="display:none"><td colspan="11" style="padding:0;background:#F8FAFF">';
+    rows += '<div style="padding:12px 18px">';
+    if (true) { // always build detail
+      rows += '<table style="width:100%;border-collapse:collapse;font-size:12.5px">';
+      rows += '<thead><tr style="background:#EEF2FF">';
+      rows += '<th style="padding:6px 12px;text-align:left;font-weight:700;color:#3730a3;font-size:11px">ประเภทกำลังคน</th>';
+      rows += '<th style="padding:6px 12px;text-align:right;font-weight:700;color:#3730a3;font-size:11px">ตามตารางกะ</th>';
+      rows += '<th style="padding:6px 12px;text-align:right;font-weight:700;color:#3730a3;font-size:11px">มาทำงานจริง</th>';
+      rows += '<th style="padding:6px 12px;text-align:right;font-weight:700;color:#3730a3;font-size:11px">ขาด/เกิน</th>';
+      rows += '<th style="padding:6px 12px;text-align:left;font-weight:700;color:#3730a3;font-size:11px">หมายเหตุ</th>';
+      rows += '</tr></thead><tbody>';
+    }
+    if (r.rows && r.rows.length) {
+      const secs2 = [...new Set(r.rows.map(rw=>rw.sec))];
+      secs2.forEach(sec => {
+        rows += '<tr><td colspan="5" style="padding:3px 12px;background:#F1F5F9;font-size:10px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.5px">'+sec+'</td></tr>';
+        r.rows.filter(rw=>rw.sec===sec).forEach(rw => {
+          const d2=(rw.actual||0)-(rw.plan||0);
+          const dc2=d2<0?'#DC2626':d2>0?'#059669':'#9CA3AF';
+          const bg=rw.isO2OTotal?'background:#FFF9C4;':'rw.isO2OSub'?'background:#FFFDE7;':'';
+          const isSub=rw.isO2OSub; const isTot=rw.isO2OTotal;
+          const rowBg=isTot?'background:#FFF9C4':'isSub'?'background:#FFFDE7':'';
+          const bg2=isTot?'background:#FFF9C4;':isSub?'background:#FFFDE7;':'';
+          const fw=isTot?'font-weight:700;':'';
+          rows += '<tr style="border-bottom:1px solid #F1F5F9;'+bg2+fw+'">';
+          rows += '<td style="padding:5px 12px;'+(isSub?'color:#E65100;padding-left:22px;':'')+(isTot?'color:#5D4037;':'')+'">'+(isSub?'':'')+esc(rw.label)+'</td>';
+          rows += '<td style="padding:5px 12px;text-align:right">'+(rw.plan||0)+'</td>';
+          rows += '<td style="padding:5px 12px;text-align:right">'+(rw.actual||0)+'</td>';
+          rows += '<td style="padding:5px 12px;text-align:right;color:'+dc2+'">'+(d2>0?'+'+d2:d2)+'</td>';
+          rows += '<td style="padding:5px 12px;color:#6B7280">'+(rw.remark||'—')+'</td></tr>';
+        });
+      });
+      const gp=r.rows.reduce((s,rw)=>s+(rw.isO2OSub?0:(+rw.plan||0)),0);
+      const ga=r.rows.reduce((s,rw)=>s+(rw.isO2OSub?0:(+rw.actual||0)),0);
+      const gd=ga-gp;
+      rows += '<tr style="background:#EEF2FF;font-weight:700">';
+      rows += '<td style="padding:7px 12px;color:#0f766e">Grand Total</td>';
+      rows += '<td style="padding:7px 12px;text-align:right;color:#0f766e">'+gp+'</td>';
+      rows += '<td style="padding:7px 12px;text-align:right;color:#0f766e">'+ga+'</td>';
+      rows += '<td style="padding:7px 12px;text-align:right;color:'+(gd<0?'#DC2626':gd>0?'#059669':'#0f766e')+'">'+(gd>0?'+'+gd:gd)+'</td>';
+      rows += '<td></td></tr>';
+    } else {
+      rows += '<tr><td colspan="5" style="padding:12px;color:var(--tx2)">ไม่มีข้อมูลรายละเอียด</td></tr>';
+    }
+    rows += '</tbody></table></div></td></tr>';
+  });
+  tbody.innerHTML = rows;
+}
+
+function toggleDetail(rid) {
+  const row = document.getElementById(rid);
+  const arr = document.getElementById('arr-'+rid);
+  if (!row) return;
+  const isOpen = row.style.display !== 'none';
+  row.style.display = isOpen ? 'none' : 'table-row';
+  if (arr) arr.textContent = isOpen ? '▶' : '▼';
+}
+
+function askDel(id) { delId=id; document.getElementById('modal-del').classList.add('open'); }
+function doDel() {
+  if (currentUser && currentUser.role !== 'admin') {
+    toast('⚠️ คุณไม่มีสิทธิ์ลบข้อมูล', 'err');
+    document.getElementById('modal-del').classList.remove('open');
+    return;
+  }
+  const rec = records.find(r=>r.id===delId);
+  document.getElementById('modal-del').classList.remove('open');
+  if (rec && rec._fbKey) {
+    db.ref('records/'+rec._fbKey).remove()
+      .then(() => { toast('ลบข้อมูลเรียบร้อย'); })
+      .catch(err => {
+        console.error(err);
+        records = records.filter(r=>r.id!==delId);
+        localStorage.setItem('wf_v2',JSON.stringify(records));
+        renderHistory();
+        toast('ลบข้อมูลเรียบร้อย (offline)');
+      });
+  } else {
+    records = records.filter(r=>r.id!==delId);
+    localStorage.setItem('wf_v2',JSON.stringify(records));
+    renderHistory();
+    toast('ลบข้อมูลเรียบร้อย');
+  }
+}
+
+// EXPORT
+function exportXL() {
+  const from = document.getElementById('h-from').value;
+  const to = document.getElementById('h-to').value;
+  const f = records.filter(r=>(!from||r.date>=from)&&(!to||r.date<=to));
+  if (!f.length) { toast('ไม่มีข้อมูล','err'); return; }
+  const wb = XLSX.utils.book_new();
+  const sumH = ['วันที่','ช่วงเวลา','เลขสาขา','ชื่อสาขา','Zone','Regional','ผู้ตรวจสอบ','ตามตารางกะ','มาทำงานจริง','ขาด/เกิน','อัตรา%'];
+  const sumD = [sumH, ...f.map(r=>[fmtDateXL(r.date),r.time,r.branchNum,r.branchName,r.zone,r.regional,r.manager,r.totalPlan,r.totalActual,r.diff,r.totalPlan?Math.round(r.totalActual/r.totalPlan*100):0])];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sumD),'สรุปกำลังคน');
+  const detH = ['วันที่','ช่วงเวลา','เลขสาขา','ชื่อสาขา','Zone','Regional','หมวด','ประเภท','ตามตารางกะ','มาทำงานจริง','ขาด/เกิน','หมายเหตุ'];
+  const detD = [detH];
+  f.forEach(r=>{
+    if (!r.rows) return;
+    r.rows.forEach(row=>{
+      const lbl = row.isO2OSub ? '    '+row.label : row.label;
+      detD.push([fmtDateXL(r.date),r.time,r.branchNum,r.branchName,r.zone,r.regional,row.sec,lbl,row.plan||0,row.actual||0,(row.actual||0)-(row.plan||0),row.remark||'']);
+    });
+  });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(detD),'รายละเอียด');
+  XLSX.writeFile(wb,'Workforce_'+( from||'all')+'_to_'+(to||'all')+'.xlsx');
+  toast('Export เรียบร้อย','ok');
+}
+
+// DASHBOARD
+function renderDashboard() {
+  const from = document.getElementById('d-from').value;
+  const to = document.getElementById('d-to').value;
+  const f = records.filter(r=>(!from||r.date>=from)&&(!to||r.date<=to));
+  const tp = f.reduce((s,r)=>s+r.totalPlan,0);
+  const ta = f.reduce((s,r)=>s+r.totalActual,0);
+  document.getElementById('d-count').textContent = f.length;
+  document.getElementById('d-plan').textContent = tp.toLocaleString();
+  document.getElementById('d-actual').textContent = ta.toLocaleString();
+  document.getElementById('d-rate').textContent = tp?(ta/tp*100).toFixed(1)+'%':'—';
+  drawRegional(f);
+  drawZone(f);
+  drawBranchTable(f);
+  fillBranchChartSel(f);
+}
+
+function groupBy(arr,key) {
+  return arr.reduce((acc,item)=>{ const k=item[key]; if(!acc[k])acc[k]=[]; acc[k].push(item); return acc; },{});
+}
+
+function drawRegional(f) {
+  const g = groupBy(f,'regional');
+  const lbl = Object.keys(g).sort();
+  const plan = lbl.map(l=>g[l].reduce((s,i)=>s+i.totalPlan,0));
+  const actual = lbl.map(l=>g[l].reduce((s,i)=>s+i.totalActual,0));
+  const rate = lbl.map((_,i)=>plan[i]?Math.round(actual[i]/plan[i]*100):0);
+
+  // Table
+  document.getElementById('tbl-regional').innerHTML = lbl.map(reg=>{
+    const it=g[reg], br=new Set(it.map(i=>i.branchNum)).size;
+    const p=it.reduce((s,i)=>s+i.totalPlan,0), a=it.reduce((s,i)=>s+i.totalActual,0), d=a-p;
+    const rt=p?(a/p*100).toFixed(1)+'%':'—';
+    const dc=d<0?'tc-err':d>0?'tc-ok':'';
+    return '<tr><td><span class="chip c-info">'+reg+'</span></td><td>'+br+'</td><td class="tr">'+p.toLocaleString()+'</td><td class="tr">'+a.toLocaleString()+'</td><td class="tr '+dc+'">'+(d>0?'+'+d:d)+'</td><td class="tr">'+rt+'</td></tr>';
+  }).join('') || '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--tx2)">ไม่มีข้อมูล</td></tr>';
+
+  // Charts
+  const topPlugin = makeTopPlugin(plan, actual, null, true);
+  if (chReg) chReg.destroy();
+  chReg = new Chart(document.getElementById('ch-regional'), {
+    type:'bar', plugins:[topPlugin],
+    data:{labels:lbl,datasets:[{label:'ตามตารางกะ',data:plan,backgroundColor:'#5eead4',borderRadius:4},{label:'มาทำงานจริง',data:actual,backgroundColor:'#0f766e',borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:28}},plugins:{legend:{display:true,position:'top',labels:{font:{family:'Sarabun,sans-serif',size:12},boxWidth:12,boxHeight:12}}},scales:{x:{ticks:{font:{family:'Sarabun,sans-serif'}}},y:{ticks:{font:{family:'Sarabun,sans-serif'}}}}}
+  });
+
+  const ratePlugin = makeRatePlugin();
+  if (chRate) chRate.destroy();
+  chRate = new Chart(document.getElementById('ch-rate'), {
+    type:'bar', plugins:[ratePlugin],
+    data:{labels:lbl,datasets:[{label:'อัตรา%',data:rate,backgroundColor:rate.map(v=>v>=95?'#059669':v>=80?'#D97706':'#DC2626'),borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:28}},plugins:{legend:{display:false}},scales:{y:{max:120,ticks:{callback:v=>v+'%',font:{family:'Sarabun,sans-serif'}}},x:{ticks:{font:{family:'Sarabun,sans-serif'}}}}}
+  });
+}
+
+function drawZone(f) {
+  const regF = document.getElementById('d-zone-reg').value;
+  const fd = regF ? f.filter(r=>r.regional===regF) : f;
+  const g = groupBy(fd,'zone');
+  const lbl = Object.keys(g).sort((a,b)=>+a.replace('Zone','')-+b.replace('Zone',''));
+  const plan = lbl.map(l=>g[l].reduce((s,i)=>s+i.totalPlan,0));
+  const actual = lbl.map(l=>g[l].reduce((s,i)=>s+i.totalActual,0));
+
+  document.getElementById('tbl-zone').innerHTML = lbl.map(z=>{
+    const it=g[z], br=new Set(it.map(i=>i.branchNum)).size;
+    const reg=[...new Set(it.map(i=>i.regional))].join(', ');
+    const p=it.reduce((s,i)=>s+i.totalPlan,0), a=it.reduce((s,i)=>s+i.totalActual,0), d=a-p;
+    const rt=p?(a/p*100).toFixed(1)+'%':'—'; const dc=d<0?'tc-err':d>0?'tc-ok':'';
+    return '<tr><td><span class="chip c-zone">'+z+'</span></td><td>'+reg+'</td><td>'+br+'</td><td class="tr">'+p.toLocaleString()+'</td><td class="tr">'+a.toLocaleString()+'</td><td class="tr '+dc+'">'+(d>0?'+'+d:d)+'</td><td class="tr">'+rt+'</td></tr>';
+  }).join('') || '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--tx2)">ไม่มีข้อมูล</td></tr>';
+
+  const h = Math.max(300, lbl.length*44+60);
+  document.getElementById('ch-zone-wrap').style.height = h+'px';
+  const topPlugin = makeTopPlugin(plan,actual,null,false,true);
+  if (chZone) chZone.destroy();
+  chZone = new Chart(document.getElementById('ch-zone'), {
+    type:'bar', plugins:[topPlugin],
+    data:{labels:lbl,datasets:[{label:'ตามตารางกะ',data:plan,backgroundColor:'#5eead4',borderRadius:4},{label:'มาทำงานจริง',data:actual,backgroundColor:'#0f766e',borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,layout:{padding:{right:50}},plugins:{legend:{display:true,position:'top',labels:{font:{family:'Sarabun,sans-serif',size:12},boxWidth:12,boxHeight:12}}},scales:{x:{ticks:{font:{family:'Sarabun,sans-serif'}}},y:{ticks:{font:{family:'Sarabun,sans-serif'}}}}}
+  });
+}
+
+function drawBranchTable(f) {
+  const regF = document.getElementById('d-br-reg').value;
+  const zoneF = document.getElementById('d-br-zone').value;
+  let fd = f;
+  if (regF) fd = fd.filter(r=>r.regional===regF);
+  if (zoneF) fd = fd.filter(r=>r.zone===zoneF);
+  const g = groupBy(fd,'branchNum');
+  document.getElementById('tbl-branch').innerHTML = Object.keys(g).sort().map(num=>{
+    const it=g[num], fst=it[0];
+    const p=it.reduce((s,i)=>s+i.totalPlan,0), a=it.reduce((s,i)=>s+i.totalActual,0), d=a-p;
+    const rt=p?(a/p*100).toFixed(1)+'%':'—'; const dc=d<0?'tc-err':d>0?'tc-ok':'';
+    return '<tr><td class="fw6">'+fst.branchNum+'</td><td>'+fst.branchName.replace('บมจ.ซีพี แอ็กซ์ตร้า สาขา','')+'</td><td>'+fst.zone+'</td><td>'+fst.regional+'</td><td class="tr">'+p.toLocaleString()+'</td><td class="tr">'+a.toLocaleString()+'</td><td class="tr '+dc+'">'+(d>0?'+'+d:d)+'</td><td class="tr">'+rt+'</td></tr>';
+  }).join('') || '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--tx2)">ไม่มีข้อมูล</td></tr>';
+}
+
+function fillBranchChartSel(f) {
+  const reg = document.getElementById('d-br-reg').value;
+  const zone = document.getElementById('d-br-zone').value;
+  rebuildBranchChartSel(f, reg, zone);
+}
+
+function drawBranchChart(f, bNum) {
+  const wrap = document.getElementById('br-chart-body');
+  const empty = document.getElementById('br-chart-empty');
+  if (!bNum) { wrap.style.display='none'; empty.style.display='flex'; return; }
+  const items = f.filter(r=>r.branchNum===bNum);
+  if (!items.length) { wrap.style.display='none'; empty.style.display='flex'; return; }
+  wrap.style.display='block'; empty.style.display='none';
+
+  const tp=items.reduce((s,r)=>s+r.totalPlan,0);
+  const ta=items.reduce((s,r)=>s+r.totalActual,0);
+  const diff=ta-tp;
+  const rate=tp?(ta/tp*100).toFixed(1):'0';
+  const b=items[0];
+  const dc=diff<0?'#DC2626':diff>0?'#059669':'#6B7280';
+  const dbg=diff<0?'#FEF2F2':diff>0?'#ECFDF5':'#F9FAFB';
+  const rc=+rate>=95?'#059669':+rate>=80?'#D97706':'#DC2626';
+
+  document.getElementById('br-info').innerHTML =
+    '<div style="background:#f0fdfa;border-radius:8px;padding:10px 14px;flex:1;min-width:130px"><div style="font-size:11px;color:#0d9488;font-weight:700;text-transform:uppercase">สาขา</div><div style="font-size:15px;font-weight:700;color:#0d9488">'+b.branchNum+'</div><div style="font-size:11px;color:#6B7280">'+b.branchName.replace('บมจ.ซีพี แอ็กซ์ตร้า สาขา','')+'</div></div>'+
+    '<div style="background:#ECFDF5;border-radius:8px;padding:10px 14px;min-width:100px"><div style="font-size:11px;color:#059669;font-weight:700;text-transform:uppercase">ตามตารางกะ</div><div style="font-size:22px;font-weight:700;color:#059669">'+tp+'</div><div style="font-size:11px;color:#6B7280">คน</div></div>'+
+    '<div style="background:#f0fdfa;border-radius:8px;padding:10px 14px;min-width:100px"><div style="font-size:11px;color:#0f766e;font-weight:700;text-transform:uppercase">มาทำงานจริง</div><div style="font-size:22px;font-weight:700;color:#0f766e">'+ta+'</div><div style="font-size:11px;color:#6B7280">คน</div></div>'+
+    '<div style="background:'+dbg+';border-radius:8px;padding:10px 14px;min-width:100px"><div style="font-size:11px;color:'+dc+';font-weight:700;text-transform:uppercase">ขาด/เกิน</div><div style="font-size:22px;font-weight:700;color:'+dc+'">'+(diff>0?'+'+diff:diff)+'</div><div style="font-size:11px;color:#6B7280">คน</div></div>'+
+    '<div style="background:#FFFBEB;border-radius:8px;padding:10px 14px;min-width:100px"><div style="font-size:11px;color:#D97706;font-weight:700;text-transform:uppercase">อัตรา</div><div style="font-size:22px;font-weight:700;color:'+rc+'">'+rate+'%</div><div style="font-size:11px;color:#6B7280">% มาทำงาน</div></div>';
+
+  const chartRows = items[0].rows ? items[0].rows.filter(r=>!r.isO2OSub) : [];
+  const rowLabels = chartRows.map(r=>r.label);
+  const planVals = chartRows.map(r=>+r.plan||0);
+  const actualVals = chartRows.map(r=>+r.actual||0);
+  const topPlugin = {
+    id:'topBranch',
+    afterDatasetsDraw(chart) {
+      const ctx2=chart.ctx;
+      chart.data.datasets.forEach((ds,di)=>{
+        const meta=chart.getDatasetMeta(di);
+        meta.data.forEach((bar,idx)=>{
+          const v=ds.data[idx];
+          if (!v) return;
+          const barTop=bar.y;
+          ctx2.save();
+          ctx2.textAlign='center';
+          ctx2.textBaseline='bottom';
+          if (di===0) {
+            ctx2.font='600 11px Sarabun,sans-serif';
+            ctx2.fillStyle='#0f766e';
+            ctx2.fillText(v, bar.x, barTop-3);
+          } else {
+            ctx2.font='700 11px Sarabun,sans-serif';
+            ctx2.fillStyle='#0f766e';
+            ctx2.fillText(v, bar.x, barTop-3);
+            const pV=planVals[idx];
+            if (pV>0) {
+              const pct=Math.round(actualVals[idx]/pV*100);
+              const pc=pct>=95?'#059669':pct>=80?'#D97706':'#DC2626';
+              ctx2.font='700 10px Sarabun,sans-serif';
+              ctx2.fillStyle=pc;
+              ctx2.fillText(pct+'%', bar.x, barTop-16);
+            }
+          }
+          ctx2.restore();
+        });
+      });
+    }
+  };
+
+  if (chBranch) chBranch.destroy();
+  chBranch = new Chart(document.getElementById('ch-branch'), {
+    type:'bar', plugins:[topPlugin],
+    data:{labels:rowLabels,datasets:[{label:'Bตามตารางกะ',data:planVals,backgroundColor:'#5eead4',borderRadius:4},{label:'มาทำงานจริง',data:actualVals,backgroundColor:'#0f766e',borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:40}},plugins:{legend:{display:true,position:'top',labels:{font:{family:'Sarabun,sans-serif',size:12},boxWidth:12,boxHeight:12}}},scales:{x:{ticks:{font:{family:'Sarabun,sans-serif',size:11},maxRotation:30}},y:{beginAtZero:true,ticks:{font:{family:'Sarabun,sans-serif'}}}}}
+  });
+}
+
+// CHART PLUGINS
+function makeTopPlugin(plan, actual, rateData, vertical=true, horizontal=false) {
+  return {
+    id:'topLabels'+Math.random(),
+    afterDatasetsDraw(chart) {
+      const ctx2=chart.ctx;
+      chart.data.datasets.forEach((ds,di)=>{
+        const meta=chart.getDatasetMeta(di);
+        meta.data.forEach((bar,idx)=>{
+          const v=ds.data[idx];
+          if (!v) return;
+          ctx2.save();
+          ctx2.font='600 11px Sarabun,sans-serif';
+          ctx2.fillStyle='#fff';
+          ctx2.textAlign='center';
+          ctx2.textBaseline='middle';
+          if (horizontal) {
+            const {x,y,width}=bar;
+            if (Math.abs(width)>30) ctx2.fillText(v, x-Math.abs(width)/2, y);
+          } else {
+            const {x,y,height}=bar;
+            if (height>18) ctx2.fillText(v, x, y+height/2);
+          }
+          ctx2.restore();
+        });
+      });
+    }
+  };
+}
+
+function makeRatePlugin() {
+  return {
+    id:'rateP',
+    afterDatasetsDraw(chart) {
+      const ctx2=chart.ctx;
+      chart.data.datasets.forEach((ds,di)=>{
+        chart.getDatasetMeta(di).data.forEach((bar,idx)=>{
+          const v=ds.data[idx]; if(!v) return;
+          const {x,y,height}=bar;
+          ctx2.save();
+          ctx2.font='700 11px Sarabun,sans-serif';
+          ctx2.fillStyle='#fff';
+          ctx2.textAlign='center';
+          ctx2.textBaseline='middle';
+          if (height>18) ctx2.fillText(v+'%', x, y+height/2);
+          ctx2.restore();
+        });
+      });
+    }
+  };
+}
+
+// EVENTS
+function bindAll() {
+  document.querySelectorAll('.nav-item').forEach(item=>{
+    item.addEventListener('click', ()=>{
+      const pg=item.dataset.page;
+      // Role check
+      const allowed = currentUser ? (ROLE_PAGES[currentUser.role] || []) : [];
+      if (!allowed.includes(pg)) { toast('⚠️ คุณไม่มีสิทธิ์เข้าหน้านี้','err'); return; }
+      document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+      document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+      item.classList.add('active');
+      document.getElementById('page-'+pg).classList.add('active');
+      const titles={record:'บันทึกกำลังคนประจำวัน',history:'ประวัติการบันทึก',dashboard:'Dashboard สรุปกำลังคน'};
+      document.getElementById('topbar-title').textContent=titles[pg];
+      if (pg==='dashboard') renderDashboard();
+      if (pg==='history') renderHistory();
+    });
+  });
+
+  document.getElementById('b-search').addEventListener('input', filterBranches);
+  document.getElementById('b-regional').addEventListener('change', filterBranches);
+  document.getElementById('b-zone').addEventListener('change', filterBranches);
+  document.getElementById('btn-change').addEventListener('click', ()=>{
+    document.getElementById('step1').style.display='block';
+    document.getElementById('step2').style.display='none';
+    filterBranches();
+  });
+  document.getElementById('btn-save').addEventListener('click', saveRecord);
+  document.getElementById('btn-export').addEventListener('click', exportXL);
+
+  ['h-from','h-to','h-regional','h-zone','h-branch'].forEach(id=>{
+    document.getElementById(id).addEventListener('change', renderHistory);
+  });
+
+  document.getElementById('btn-d-filter').addEventListener('click', renderDashboard);
+
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const tab=btn.dataset.tab;
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-'+tab).classList.add('active');
+    });
+  });
+
+  // Dashboard Zone tab: when Regional changes, rebuild zone options then redraw
+  document.getElementById('d-zone-reg').addEventListener('change', function() {
+    drawZone(getDF());
+  });
+
+  // Dashboard Branch tab: Regional cascade → zone dropdown + table + chart selector
+  document.getElementById('d-br-reg').addEventListener('change', function() {
+    const reg = this.value;
+    rebuildZoneSelect('d-br-zone', reg);
+    const f = getDF();
+    drawBranchTable(f);
+    rebuildBranchChartSel(f, reg, '');
+  });
+
+  // Dashboard Branch tab: Zone filter → table + chart selector
+  document.getElementById('d-br-zone').addEventListener('change', function() {
+    const reg = document.getElementById('d-br-reg').value;
+    const zone = this.value;
+    const f = getDF();
+    drawBranchTable(f);
+    rebuildBranchChartSel(f, reg, zone);
+  });
+
+  document.getElementById('br-chart-sel').addEventListener('change', function() {
+    const reg = document.getElementById('d-br-reg').value;
+    const zone = document.getElementById('d-br-zone').value;
+    let f = getDF();
+    if (reg) f = f.filter(r=>r.regional===reg);
+    if (zone) f = f.filter(r=>r.zone===zone);
+    drawBranchChart(f, this.value);
+  });
+
+  document.getElementById('mdel-x').addEventListener('click', ()=>document.getElementById('modal-del').classList.remove('open'));
+  document.getElementById('mdel-cancel').addEventListener('click', ()=>document.getElementById('modal-del').classList.remove('open'));
+  document.getElementById('mdel-ok').addEventListener('click', doDel);
+}
+
+function getDF() {
+  const from=document.getElementById('d-from').value, to=document.getElementById('d-to').value;
+  return records.filter(r=>(!from||r.date>=from)&&(!to||r.date<=to));
+}
+
+// UTILS
+function fmtDate(ds) {
+  if (!ds) return '';
+  const [y,m,d]=ds.split('-');
+  const mo=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  return parseInt(d)+' '+mo[parseInt(m)-1]+' '+(parseInt(y)+543);
+}
+function fmtDateXL(ds) {
+  if (!ds) return '';
+  const [y,m,d]=ds.split('-');
+  return d.padStart(2,'0')+'/'+m.padStart(2,'0')+'/'+y;
+}
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function toast(msg, type='') {
+  const tc=document.getElementById('toasts');
+  const t=document.createElement('div');
+  t.className='toast '+type;
+  t.textContent=msg;
+  tc.appendChild(t);
+  setTimeout(()=>t.remove(), 3000);
+}
+
+// ===== LOGIN SYSTEM =====
+const USERS = {
+  'admin': { pass: 'adminho', role: 'admin', display: 'Admin', avatar: 'A' },
+  'soa':   { pass: 'makroho', role: 'viewer', display: 'SOA', avatar: 'S' }
+};
+
+// Role permissions
+const ROLE_PAGES = {
+  admin:  ['record','history','dashboard'],
+  viewer: ['history','dashboard']
+};
+
+let currentUser = null;
+let secretClickCount = 0;
+let secretTimer = null;
+
+function checkAuth() {
+  const saved = sessionStorage.getItem('wf_session');
+  if (saved) {
+    try {
+      currentUser = JSON.parse(saved);
+      showApp();
+      return true;
+    } catch(e) {}
+  }
+  showLogin();
+  return false;
+}
+
+function showLogin() {
+  const overlay = document.getElementById('login-overlay');
+  // Reset inline styles left by showApp(), then re-display
+  overlay.style.opacity = '';
+  overlay.style.transition = '';
+  overlay.style.display = 'flex';
+  overlay.classList.remove('hide');
+  setTimeout(() => document.getElementById('inp-user').focus(), 200);
+}
+
+function showApp() {
+  const overlay = document.getElementById('login-overlay');
+  overlay.style.opacity = '0';
+  overlay.style.transition = 'opacity .4s ease';
+  setTimeout(() => {
+    overlay.style.display = 'none';
+    overlay.classList.add('hide');
+  }, 400);
+  if (currentUser) {
+    document.getElementById('user-name-lbl').textContent = currentUser.display;
+    document.getElementById('user-avatar').textContent = currentUser.avatar;
+    applyRoleUI();
+  }
+}
+
+function applyRoleUI() {
+  const role = currentUser ? currentUser.role : 'viewer';
+  const allowedPages = ROLE_PAGES[role] || ['history','dashboard'];
+
+  // Show/hide nav items based on role
+  document.querySelectorAll('.nav-item[data-page]').forEach(item => {
+    const pg = item.dataset.page;
+    if (allowedPages.includes(pg)) {
+      item.style.display = 'flex';
+    } else {
+      item.style.display = 'none';
+    }
+  });
+
+  // If current active page is not allowed → redirect to first allowed page
+  const activePg = document.querySelector('.page.active');
+  if (activePg) {
+    const activePgId = activePg.id.replace('page-','');
+    if (!allowedPages.includes(activePgId)) {
+      const first = allowedPages[0];
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById('page-'+first).classList.add('active');
+      const navEl = document.querySelector('.nav-item[data-page="'+first+'"]');
+      if (navEl) navEl.classList.add('active');
+      const titles = {record:'บันทึกกำลังคนประจำวัน',history:'ประวัติการบันทึก',dashboard:'Dashboard สรุปกำลังคน'};
+      document.getElementById('topbar-title').textContent = titles[first];
+      if (first === 'dashboard') renderDashboard();
+      if (first === 'history') renderHistory();
+    }
+  }
+
+  // Show/hide action buttons based on role
+  const isAdmin = role === 'admin';
+  const saveBtn = document.getElementById('btn-save');
+  const exportBtn = document.getElementById('btn-export');
+  const changeBtn = document.getElementById('btn-change');
+
+  // Export Excel visible for all roles, save/change only for admin
+  if (saveBtn) saveBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+  if (changeBtn) changeBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+
+  // Hide delete buttons in history table for viewer
+  if (!isAdmin) {
+    document.querySelectorAll('[onclick^="askDel"]').forEach(b => b.style.display='none');
+  }
+
+  // Show role badge on user avatar
+  const badge = document.getElementById('user-badge');
+  if (badge) {
+    badge.title = isAdmin ? 'Admin — คลิกเพื่อออกจากระบบ' : 'Viewer (ดูข้อมูล) — คลิกเพื่อออกจากระบบ';
+  }
+  const avatar = document.getElementById('user-avatar');
+  if (avatar) {
+    avatar.style.background = isAdmin
+      ? 'linear-gradient(135deg,#0f766e,#0d9488)'
+      : 'linear-gradient(135deg,#059669,#10b981)';
+  }
+
+  // Update sidebar footer
+  const sbAvatar = document.getElementById('sb-avatar');
+  const sbUserName = document.getElementById('sb-user-name');
+  const sbUserRole = document.getElementById('sb-user-role');
+  if (sbAvatar) sbAvatar.textContent = currentUser.avatar || currentUser.display.charAt(0).toUpperCase();
+  if (sbUserName) sbUserName.textContent = currentUser.display;
+  if (sbUserRole) sbUserRole.textContent = isAdmin ? 'Administrator' : 'Viewer (ดูข้อมูล)';
+
+  // Add role class to body for CSS scoping
+  document.body.classList.remove('role-admin','role-viewer');
+  document.body.classList.add('role-'+role);
+
+  // Show role label next to user name
+  const nameEl = document.getElementById('user-name-lbl');
+  if (nameEl) {
+    const roleLabel = isAdmin
+      ? '<span style="font-size:10px;background:#f0fdfa;color:#0f766e;padding:1px 6px;border-radius:99px;margin-left:4px;font-weight:600">Admin</span>'
+      : '<span style="font-size:10px;background:#ECFDF5;color:#059669;padding:1px 6px;border-radius:99px;margin-left:4px;font-weight:600">Viewer</span>';
+    nameEl.innerHTML = currentUser.display + roleLabel;
+  }
+}
+
+function doLogin() {
+  const u = document.getElementById('inp-user').value.trim().toLowerCase();
+  const p = document.getElementById('inp-pass').value;
+  const err = document.getElementById('login-err');
+  const btn = document.getElementById('login-btn');
+
+  err.classList.remove('show');
+
+  if (!u || !p) {
+    err.textContent = 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน';
+    err.classList.add('show');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'กำลังตรวจสอบ...';
+
+  setTimeout(() => {
+    const user = USERS[u];
+    if (user && user.pass === p) {
+      currentUser = { username: u, role: user.role, display: user.display, avatar: user.avatar };
+      sessionStorage.setItem('wf_session', JSON.stringify(currentUser));
+      document.getElementById('inp-pass').value = '';
+      showApp();
+      toast('ยินดีต้อนรับ ' + currentUser.display + ' 👋', 'ok');
+      // init app after login
+      if (records.length === 0) renderHistory();
+    } else {
+      err.textContent = 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
+      err.classList.add('show');
+      document.getElementById('inp-pass').value = '';
+      document.getElementById('inp-pass').focus();
+      // shake animation
+      const box = document.querySelector('.login-box');
+      box.style.animation = 'shake .4s ease';
+      setTimeout(() => box.style.animation = '', 400);
+    }
+    btn.disabled = false;
+    btn.textContent = 'เข้าสู่ระบบ';
+  }, 400);
+}
+
+function openLogoutModal() {
+  document.getElementById('logout-modal-bg').classList.add('open');
+}
+
+function closeLogoutModal() {
+  document.getElementById('logout-modal-bg').classList.remove('open');
+}
+
+// Close modal when clicking backdrop
+document.getElementById('logout-modal-bg').addEventListener('click', function(e) {
+  if (e.target === this) closeLogoutModal();
+});
+
+function doLogout() {
+  closeLogoutModal();
+  sessionStorage.removeItem('wf_session');
+  currentUser = null;
+  document.getElementById('inp-user').value = '';
+  document.getElementById('inp-pass').value = '';
+  document.getElementById('login-err').classList.remove('show');
+  showLogin();
+}
+
+// Enter key on login fields
+document.addEventListener('DOMContentLoaded', () => {
+  ['inp-user','inp-pass'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
+  });
+
+  // Toggle password visibility
+  const pwToggle = document.getElementById('pw-toggle');
+  if (pwToggle) {
+    pwToggle.addEventListener('click', () => {
+      const inp = document.getElementById('inp-pass');
+      const icon = document.getElementById('eye-icon');
+      if (inp.type === 'password') {
+        inp.type = 'text';
+        icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 4.411m0 0L21 21"/>';
+      } else {
+        inp.type = 'password';
+        icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>';
+      }
+    });
+  }
+
+  // Secret corner trigger (5 clicks in 3s to bypass login for demo/emergency)
+  const st = document.getElementById('secret-trigger');
+  if (st) {
+    st.addEventListener('click', () => {
+      secretClickCount++;
+      clearTimeout(secretTimer);
+      secretTimer = setTimeout(() => { secretClickCount = 0; }, 3000);
+      if (secretClickCount >= 5) {
+        secretClickCount = 0;
+        // Show login form briefly for re-auth
+        showLogin();
+      }
+    });
+  }
+});
+
+// Add shake keyframe dynamically
+const shakeStyle = document.createElement('style');
+shakeStyle.textContent = '@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}';
+document.head.appendChild(shakeStyle);
+
+
+// ─── MOBILE SIDEBAR TOGGLE ────────────────────────────────
+function toggleSidebar() {
+  const sb = document.querySelector('.sb');
+  const bd = document.getElementById('sb-backdrop');
+  if (sb.classList.contains('open')) {
+    closeSidebar();
+  } else {
+    sb.classList.add('open');
+    bd.classList.add('open');
+    document.body.style.overflow = 'hidden'; // prevent scroll when open
+  }
+}
+
+function closeSidebar() {
+  const sb = document.querySelector('.sb');
+  const bd = document.getElementById('sb-backdrop');
+  sb.classList.remove('open');
+  bd.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Close sidebar when nav item clicked on mobile
+document.querySelectorAll('.nav-item').forEach(item => {
+  const origClick = item.onclick;
+  item.addEventListener('click', () => {
+    if (window.innerWidth < 1024) closeSidebar();
+  });
+});
+
+// Close sidebar on resize to desktop
+window.addEventListener('resize', () => {
+  if (window.innerWidth >= 1024) {
+    document.querySelector('.sb').classList.remove('open');
+    document.getElementById('sb-backdrop').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+});
+
+// Prevent iOS rubber-band scroll on sidebar
+document.querySelector('.sb').addEventListener('touchmove', e => {
+  e.stopPropagation();
+}, { passive: true });
+
+// Start
+checkAuth();
+init();
+</script>
+</body>
+</html>
