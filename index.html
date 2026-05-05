@@ -14,6 +14,7 @@
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -157,6 +158,7 @@ input.le:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 2px r
   box-shadow:0 4px 12px rgba(0,0,0,.15);display:flex;align-items:center;gap:8px;animation:tIn .2s ease}
 .toast.ok{background:var(--ok)}.toast.err{background:var(--err)}
 @keyframes tIn{from{transform:translateX(50px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 
 /* MODAL */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:200;
@@ -999,7 +1001,17 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+// Enable analytics if supported
+try { firebase.analytics(); } catch(e) { console.warn('Analytics not available:', e.message); }
 dbRef = db.ref('records');
+// Test Firebase connection on startup
+db.ref('.info/connected').on('value', (snap) => {
+  if (snap.val() === true) {
+    showFbStatus('online');
+  } else {
+    showFbStatus('loading');
+  }
+});
 
 // INIT
 function init() {
@@ -1018,15 +1030,20 @@ function init() {
   // Firebase Realtime Database - listen to all records (real-time sync)
   db.ref('records').orderByChild('date').on('value', (snap) => {
     records = [];
-    snap.forEach(child => { records.push({...child.val(), _fbKey: child.key}); });
-    records.sort((a,b) => b.id - a.id);
+    snap.forEach(child => {
+      const val = child.val();
+      if (val) records.push({...val, _fbKey: child.key});
+    });
+    records.sort((a,b) => (b.id||0) - (a.id||0));
     renderHistory();
     const pg = document.querySelector('.page.active');
     if (pg && pg.id==='page-dashboard') renderDashboard();
     showFbStatus('online');
   }, (err) => {
-    console.error('Firebase error:', err);
-    records = JSON.parse(localStorage.getItem('wf_v2') || '[]');
+    console.error('Firebase listener error:', err);
+    try {
+      records = JSON.parse(localStorage.getItem('wf_v2') || '[]');
+    } catch(e) { records = []; }
     renderHistory();
     showFbStatus('offline');
     toast('⚠️ ไม่สามารถเชื่อมต่อ Firebase - ใช้ข้อมูลในเครื่องชั่วคราว', 'err');
@@ -1280,14 +1297,18 @@ function updTotals() {
 
 // SAVE
 function saveRecord() {
+  // Guard: role check
   if (currentUser && currentUser.role !== 'admin') {
     toast('⚠️ คุณไม่มีสิทธิ์บันทึกข้อมูล', 'err'); return;
   }
   if (!selBranch) { toast('กรุณาเลือกสาขาก่อน','err'); return; }
+
   const date = document.getElementById('rec-date').value;
-  const time = document.getElementById('rec-time').value;
+  const time = document.getElementById('rec-time').value || '05:00-12:00';
   if (!date) { toast('กรุณาเลือกวันที่','err'); return; }
-  // Exclude O2O sub-rows from grand total (O2O Total row already sums them)
+  if (!wfRows || wfRows.length === 0) { toast('ไม่มีข้อมูลตารางกำลังคน','err'); return; }
+
+  // Build record
   const tp = wfRows.reduce((s,r)=>s+(r.isO2OSub?0:(+r.plan||0)),0);
   const ta = wfRows.reduce((s,r)=>s+(r.isO2OSub?0:(+r.actual||0)),0);
   const rec = {
@@ -1297,24 +1318,62 @@ function saveRecord() {
     totalPlan: tp, totalActual: ta, diff: ta-tp,
     rows: JSON.parse(JSON.stringify(wfRows))
   };
+
   const btn = document.getElementById('btn-save');
-  btn.disabled = true; btn.textContent = 'กำลังบันทึก...';
-  db.ref('records').push(rec)
-    .then(() => {
-      toast('✅ บันทึกสาขา '+selBranch.num+' เรียบร้อย','ok');
-      localStorage.setItem('wf_v2', JSON.stringify(records));
-    })
-    .catch(err => {
-      console.error(err);
-      records.unshift(rec);
-      localStorage.setItem('wf_v2', JSON.stringify(records));
-      renderHistory();
-      toast('⚠️ บันทึกในเครื่องชั่วคราว (Firebase ไม่ตอบสนอง)','err');
-    })
-    .finally(() => {
-      btn.disabled = false;
-      btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>บันทึกข้อมูล';
-    });
+  const origHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>บันทึกข้อมูล';
+  btn.disabled = true;
+  btn.innerHTML = '⏳ กำลังบันทึก...';
+
+  // Timeout guard: ถ้า Firebase ไม่ตอบใน 8 วินาที บันทึกในเครื่องแทน
+  let done = false;
+  const timeoutId = setTimeout(() => {
+    if (done) return;
+    done = true;
+    console.warn('Firebase timeout — saving locally');
+    records.unshift(rec);
+    try { localStorage.setItem('wf_v2', JSON.stringify(records)); } catch(e) {}
+    renderHistory();
+    toast('⚠️ Firebase ไม่ตอบสนอง — บันทึกในเครื่องชั่วคราวแล้ว', 'err');
+    btn.disabled = false;
+    btn.innerHTML = origHTML;
+  }, 8000);
+
+  // Firebase push
+  try {
+    db.ref('records').push(rec)
+      .then(() => {
+        if (done) return;
+        done = true;
+        clearTimeout(timeoutId);
+        try { localStorage.setItem('wf_v2', JSON.stringify(records)); } catch(e) {}
+        toast('✅ บันทึกสาขา '+selBranch.num+' เรียบร้อย','ok');
+        btn.disabled = false;
+        btn.innerHTML = origHTML;
+      })
+      .catch(err => {
+        if (done) return;
+        done = true;
+        clearTimeout(timeoutId);
+        console.error('Firebase push error:', err);
+        records.unshift(rec);
+        try { localStorage.setItem('wf_v2', JSON.stringify(records)); } catch(e) {}
+        renderHistory();
+        toast('⚠️ บันทึกในเครื่องชั่วคราว ('+(err.code||err.message)+')', 'err');
+        btn.disabled = false;
+        btn.innerHTML = origHTML;
+      });
+  } catch(e) {
+    if (done) return;
+    done = true;
+    clearTimeout(timeoutId);
+    console.error('Firebase exception:', e);
+    records.unshift(rec);
+    try { localStorage.setItem('wf_v2', JSON.stringify(records)); } catch(ex) {}
+    renderHistory();
+    toast('⚠️ บันทึกในเครื่องชั่วคราว (ไม่สามารถเชื่อมต่อ Firebase)','err');
+    btn.disabled = false;
+    btn.innerHTML = origHTML;
+  }
 }
 
 // HISTORY
