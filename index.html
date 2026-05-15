@@ -126,6 +126,8 @@ input.le{background:transparent;border:1px dashed transparent;border-radius:4px;
   padding:2px 6px;font-size:13px;font-family:var(--font);color:var(--tx);width:100%;cursor:text;outline:none}
 input.le:hover{border-color:var(--bdr);background:#fff}
 input.le:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 2px rgba(13,148,136,.1)}
+input.le[readonly]{cursor:default;pointer-events:none;border-color:transparent !important;background:transparent !important;box-shadow:none !important;user-select:text}
+input.le[readonly]:hover{border-color:transparent;background:transparent}
 
 /* TABS */
 .tab-list{display:flex;gap:4px;padding:4px;background:var(--bg3);border-radius:var(--r2);width:fit-content}
@@ -806,7 +808,7 @@ input, select, textarea { font-size: max(16px, 1em); }
       </div>
       <div class="tbl-wrap">
         <table>
-          <thead><tr><th>วันที่</th><th>ช่วงเวลา</th><th>เลขสาขา</th><th>ชื่อสาขา</th><th>Zone</th><th>Regional</th><th class="tr">ตามตารางกะ</th><th class="tr">มาทำงานจริง</th><th class="tr">ขาด/เกิน</th><th class="tr">อัตรา%</th><th></th></tr></thead>
+          <thead><tr><th>วันที่</th><th>ช่วงเวลา</th><th>เลขสาขา</th><th>ชื่อสาขา</th><th>Zone</th><th>Regional</th><th class="tr">ตามตารางกะ</th><th class="tr">มาทำงานจริง</th><th class="tr">ขาด/เกิน</th><th class="tr">อัตรา%</th><th class="tr">จัดการ</th></tr></thead>
           <tbody id="h-tbody"></tbody>
         </table>
         <div class="empty" id="h-empty" style="display:none">
@@ -961,11 +963,12 @@ input, select, textarea { font-size: max(16px, 1em); }
 const BRANCHES = [{"num":"001","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาลาดพร้าว 1","zone":"Zone9","regional":"Regional 2","manager":"คุณ เอกธัช นาวิกบุตร"},{"num":"002","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาแจ้งวัฒนะ 2","zone":"Zone9","regional":"Regional 2","manager":"คุณ เอกธัช นาวิกบุตร"},{"num":"003","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาศรีนครินทร์ 3","zone":"Zone10","regional":"Regional 2","manager":"คุณ อารีย์ นิ่มกลาง"},{"num":"004","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาบางบอน 4","zone":"Zone6","regional":"Regional 2","manager":"คุณ ภกรณ์กาญจ์ เมทินีพิศาลกุล"},{"num":"005","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาชลบุรี 5","zone":"Zone13","regional":"Regional 3","manager":"คุณ เสถียร ผลขาว"},{"num":"006","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเชียงใหม่ 6","zone":"Zone1","regional":"Regional 1","manager":"คุณ พิชิต คันธาเวช"},{"num":"007","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขานครราชสีมา 7","zone":"Zone11","regional":"Regional 3","manager":"คุณ ณัฐวัฒน์ เดชโนนสังข์"},{"num":"008","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขารังสิต 8","zone":"Zone12","regional":"Regional 3","manager":"คุณ พจนีย์ กลั่นเขตกิจ"},{"num":"009","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาหาดใหญ่ 9","zone":"Zone17","regional":"Regional 4","manager":"คุณ พงศิกร รังษีพลาสวัสดิ์"},{"num":"010","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาอุดรธานี 10","zone":"Zone3","regional":"Regional 1","manager":"คุณ มะลิวัลย์ โขงชัยภูมิ"},{"num":"011","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาพิษณุโลก 11","zone":"Zone2","regional":"Regional 1","manager":"คุณ ธีระพงษ์ อินจุ้มสาย"},{"num":"012","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาขอนแก่น 12","zone":"Zone4","regional":"Regional 1","manager":"คุณ สุมาลี หาญสว่าง"},{"num":"013","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสุราษฎร์ธานี 13","zone":"Zone16","regional":"Regional 4","manager":"คุณ บุษรา ไชยเสน"},{"num":"014","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาอุบลราชธานี 14","zone":"Zone11","regional":"Regional 3","manager":"คุณ ณัฐวัฒน์ เดชโนนสังข์"},{"num":"015","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาระยอง 15","zone":"Zone14","regional":"Regional 3","manager":"คุณ รัตวัชร์ พงศ์วัจนาทิน"},{"num":"016","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขานครสวรรค์ 16","zone":"Zone5","regional":"Regional 1","manager":"คุณ ลัดดาวัลย์ ธรรมศร"},{"num":"017","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาจรัญสนิทวงศ์ 17","zone":"Zone7","regional":"Regional 2","manager":"คุณ ธนกร วุฒิเดชเกรียงไกร"},{"num":"018","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสาทร 18","zone":"Zone8","regional":"Regional 2","manager":"คุณ ศุจิกา พงษากาล"},{"num":"019","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขานครปฐม 19","zone":"Zone6","regional":"Regional 2","manager":"คุณ ภกรณ์กาญจ์ เมทินีพิศาลกุล"},{"num":"020","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสุรินทร์ 20","zone":"Zone11","regional":"Regional 3","manager":"คุณ ณัฐวัฒน์ เดชโนนสังข์"},{"num":"021","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสามเสน 21","zone":"Zone7","regional":"Regional 2","manager":"คุณ ธนกร วุฒิเดชเกรียงไกร"},{"num":"022","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขานครศรีธรรมราช 22","zone":"Zone17","regional":"Regional 4","manager":"คุณ พงศิกร รังษีพลาสวัสดิ์"},{"num":"023","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเชียงราย 23","zone":"Zone1","regional":"Regional 1","manager":"คุณ พิชิต คันธาเวช"},{"num":"024","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสกลนคร 24","zone":"Zone3","regional":"Regional 1","manager":"คุณ มะลิวัลย์ โขงชัยภูมิ"},{"num":"025","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสุพรรณบุรี 25","zone":"Zone5","regional":"Regional 1","manager":"คุณ ลัดดาวัลย์ ธรรมศร"},{"num":"026","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาจันทบุรี 26","zone":"Zone14","regional":"Regional 3","manager":"คุณ รัตวัชร์ พงศ์วัจนาทิน"},{"num":"027","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาภูเก็ต 27","zone":"Zone16","regional":"Regional 4","manager":"คุณ บุษรา ไชยเสน"},{"num":"028","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาร้อยเอ็ด 28","zone":"Zone4","regional":"Regional 1","manager":"คุณ สุมาลี หาญสว่าง"},{"num":"029","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาตรัง 29","zone":"Zone17","regional":"Regional 4","manager":"คุณ พงศิกร รังษีพลาสวัสดิ์"},{"num":"030","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสระแก้ว 30","zone":"Zone12","regional":"Regional 3","manager":"คุณ พจนีย์ กลั่นเขตกิจ"},{"num":"031","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเกาะสมุย 31","zone":"Zone17","regional":"Regional 4","manager":"คุณ พงศิกร รังษีพลาสวัสดิ์"},{"num":"032","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาบุรีรัมย์ 32","zone":"Zone11","regional":"Regional 3","manager":"คุณ ณัฐวัฒน์ เดชโนนสังข์"},{"num":"033","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาศรีสะเกษ 33","zone":"Zone11","regional":"Regional 3","manager":"คุณ ณัฐวัฒน์ เดชโนนสังข์"},{"num":"034","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาลำพูน 34","zone":"Zone1","regional":"Regional 1","manager":"คุณ พิชิต คันธาเวช"},{"num":"035","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขากระบี่ 35","zone":"Zone16","regional":"Regional 4","manager":"คุณ บุษรา ไชยเสน"},{"num":"036","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเพชรบุรี 36","zone":"Zone15","regional":"Regional 3","manager":"คุณ วรรณิภา บุญจริง"},{"num":"037","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาชัยภูมิ 37","zone":"Zone4","regional":"Regional 1","manager":"คุณ สุมาลี หาญสว่าง"},{"num":"038","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสระบุรี 38","zone":"Zone5","regional":"Regional 1","manager":"คุณ ลัดดาวัลย์ ธรรมศร"},{"num":"039","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาปราณบุรี 39","zone":"Zone15","regional":"Regional 3","manager":"คุณ วรรณิภา บุญจริง"},{"num":"040","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาฉะเชิงเทรา 40","zone":"Zone13","regional":"Regional 3","manager":"คุณ เสถียร ผลขาว"},{"num":"041","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเชียงใหม่2 41","zone":"Zone1","regional":"Regional 1","manager":"คุณ พิชิต คันธาเวช"},{"num":"042","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขารามอินทรา 42","zone":"Zone9","regional":"Regional 2","manager":"คุณ เอกธัช นาวิกบุตร"},{"num":"043","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาชุมพร 43","zone":"Zone15","regional":"Regional 3","manager":"คุณ วรรณิภา บุญจริง"},{"num":"044","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาพัทยา 44","zone":"Zone14","regional":"Regional 3","manager":"คุณ รัตวัชร์ พงศ์วัจนาทิน"},{"num":"045","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขากำแพงเพชร 45","zone":"Zone2","regional":"Regional 1","manager":"คุณ ธีระพงษ์ อินจุ้มสาย"},{"num":"046","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขากาญจนบุรี 46","zone":"Zone6","regional":"Regional 2","manager":"คุณ ภกรณ์กาญจ์ เมทินีพิศาลกุล"},{"num":"047","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาลพบุรี 47","zone":"Zone5","regional":"Regional 1","manager":"คุณ ลัดดาวัลย์ ธรรมศร"},{"num":"048","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาหนองคาย 48","zone":"Zone3","regional":"Regional 1","manager":"คุณ มะลิวัลย์ โขงชัยภูมิ"},{"num":"049","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาราชบุรี 49","zone":"Zone6","regional":"Regional 2","manager":"คุณ ภกรณ์กาญจ์ เมทินีพิศาลกุล"},{"num":"050","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาแม่ริม 50","zone":"Zone1","regional":"Regional 1","manager":"คุณ พิชิต คันธาเวช"},{"num":"051","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาอยุธยา 51","zone":"Zone12","regional":"Regional 3","manager":"คุณ พจนีย์ กลั่นเขตกิจ"},{"num":"052","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาลำปาง 52","zone":"Zone2","regional":"Regional 1","manager":"คุณ ธีระพงษ์ อินจุ้มสาย"},{"num":"053","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาหัวหิน 53","zone":"Zone15","regional":"Regional 3","manager":"คุณ วรรณิภา บุญจริง"},{"num":"054","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาคลองหลวง 54","zone":"Zone12","regional":"Regional 3","manager":"คุณ พจนีย์ กลั่นเขตกิจ"},{"num":"055","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเลย 55","zone":"Zone3","regional":"Regional 1","manager":"คุณ มะลิวัลย์ โขงชัยภูมิ"},{"num":"056","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเพชรบูรณ์ 56","zone":"Zone5","regional":"Regional 1","manager":"คุณ ลัดดาวัลย์ ธรรมศร"},{"num":"057","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาบางพลี 57","zone":"Zone8","regional":"Regional 2","manager":"คุณ ศุจิกา พงษากาล"},{"num":"058","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขามุกดาหาร 58","zone":"Zone3","regional":"Regional 1","manager":"คุณ มะลิวัลย์ โขงชัยภูมิ"},{"num":"059","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสตูล 59","zone":"Zone17","regional":"Regional 4","manager":"คุณ พงศิกร รังษีพลาสวัสดิ์"},{"num":"060","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาตราด 60","zone":"Zone14","regional":"Regional 3","manager":"คุณ รัตวัชร์ พงศ์วัจนาทิน"},{"num":"061","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาชุมแพ 61","zone":"Zone4","regional":"Regional 1","manager":"คุณ สุมาลี หาญสว่าง"},{"num":"062","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาราไวย์ 62","zone":"Zone16","regional":"Regional 4","manager":"คุณ บุษรา ไชยเสน"},{"num":"063","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขานครพนม 63","zone":"Zone3","regional":"Regional 1","manager":"คุณ มะลิวัลย์ โขงชัยภูมิ"},{"num":"064","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเกาะพะงัน 64","zone":"Zone17","regional":"Regional 4","manager":"คุณ พงศิกร รังษีพลาสวัสดิ์"},{"num":"065","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาบึงกาฬ 65","zone":"Zone3","regional":"Regional 1","manager":"คุณ มะลิวัลย์ โขงชัยภูมิ"},{"num":"066","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาพัทยาเหนือ 66","zone":"Zone14","regional":"Regional 3","manager":"คุณ รัตวัชร์ พงศ์วัจนาทิน"},{"num":"067","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาแม่สาย 67","zone":"Zone1","regional":"Regional 1","manager":"คุณ พิชิต คันธาเวช"},{"num":"068","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาศาลายา 68","zone":"Zone6","regional":"Regional 2","manager":"คุณ ภกรณ์กาญจ์ เมทินีพิศาลกุล"},{"num":"069","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาพัทลุง 69","zone":"Zone16","regional":"Regional 4","manager":"คุณ บุษรา ไชยเสน"},{"num":"070","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสุโขทัย 70","zone":"Zone2","regional":"Regional 1","manager":"คุณ ธีระพงษ์ อินจุ้มสาย"},{"num":"071","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาป่าตอง 71","zone":"Zone16","regional":"Regional 4","manager":"คุณ บุษรา ไชยเสน"},{"num":"072","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสมุทรสาคร 72","zone":"Zone6","regional":"Regional 2","manager":"คุณ ภกรณ์กาญจ์ เมทินีพิศาลกุล"},{"num":"073","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาแม่สอด 73","zone":"Zone2","regional":"Regional 1","manager":"คุณ ธีระพงษ์ อินจุ้มสาย"},{"num":"074","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาปากช่อง 74","zone":"Zone5","regional":"Regional 1","manager":"คุณ ลัดดาวัลย์ ธรรมศร"},{"num":"075","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาถลาง 75","zone":"Zone16","regional":"Regional 4","manager":"คุณ บุษรา ไชยเสน"},{"num":"076","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาระนอง 76","zone":"Zone15","regional":"Regional 3","manager":"คุณ วรรณิภา บุญจริง"},{"num":"077","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาละไม 77","zone":"Zone17","regional":"Regional 4","manager":"คุณ พงศิกร รังษีพลาสวัสดิ์"},{"num":"078","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขากัลปพฤกษ์ 78","zone":"Zone8","regional":"Regional 2","manager":"คุณ ศุจิกา พงษากาล"},{"num":"079","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขายโสธร 79","zone":"Zone4","regional":"Regional 1","manager":"คุณ สุมาลี หาญสว่าง"},{"num":"080","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขามหาสารคาม 80","zone":"Zone4","regional":"Regional 1","manager":"คุณ สุมาลี หาญสว่าง"},{"num":"081","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาฝาง 81","zone":"Zone1","regional":"Regional 1","manager":"คุณ พิชิต คันธาเวช"},{"num":"082","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขานครนายก 82","zone":"Zone12","regional":"Regional 3","manager":"คุณ พจนีย์ กลั่นเขตกิจ"},{"num":"083","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขานครอินทร์ 83","zone":"Zone7","regional":"Regional 2","manager":"คุณ ธนกร วุฒิเดชเกรียงไกร"},{"num":"084","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาบ้านเพ 84","zone":"Zone14","regional":"Regional 3","manager":"คุณ รัตวัชร์ พงศ์วัจนาทิน"},{"num":"085","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาทุ่งสง 85","zone":"Zone17","regional":"Regional 4","manager":"คุณ พงศิกร รังษีพลาสวัสดิ์"},{"num":"086","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาศรีนครินทร์2 86","zone":"Zone10","regional":"Regional 2","manager":"คุณ อารีย์ นิ่มกลาง"},{"num":"087","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาพะเยา 87","zone":"Zone1","regional":"Regional 1","manager":"คุณ พิชิต คันธาเวช"},{"num":"089","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาพิษณุโลก2 89","zone":"Zone2","regional":"Regional 1","manager":"คุณ ธีระพงษ์ อินจุ้มสาย"},{"num":"096","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาทาวน์อินทาวน์ 96","zone":"Zone10","regional":"Regional 2","manager":"คุณ อารีย์ นิ่มกลาง"},{"num":"100","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาแพร่ 100","zone":"Zone2","regional":"Regional 1","manager":"คุณ ธีระพงษ์ อินจุ้มสาย"},{"num":"101","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเกาะช้าง 101","zone":"Zone14","regional":"Regional 3","manager":"คุณ รัตวัชร์ พงศ์วัจนาทิน"},{"num":"102","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขานครราชสีมา2 102","zone":"Zone11","regional":"Regional 3","manager":"คุณ ณัฐวัฒน์ เดชโนนสังข์"},{"num":"103","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาน่าน 103","zone":"Zone2","regional":"Regional 1","manager":"คุณ ธีระพงษ์ อินจุ้มสาย"},{"num":"104","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาอ่าวนาง 104","zone":"Zone16","regional":"Regional 4","manager":"คุณ บุษรา ไชยเสน"},{"num":"105","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขากะรน 105","zone":"Zone16","regional":"Regional 4","manager":"คุณ บุษรา ไชยเสน"},{"num":"106","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาวารินชำราบ 106","zone":"Zone11","regional":"Regional 3","manager":"คุณ ณัฐวัฒน์ เดชโนนสังข์"},{"num":"107","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาหนองบัวลำภู 107","zone":"Zone3","regional":"Regional 1","manager":"คุณ มะลิวัลย์ โขงชัยภูมิ"},{"num":"108","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาหนองจอก 108","zone":"Zone13","regional":"Regional 3","manager":"คุณ เสถียร ผลขาว"},{"num":"109","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาแหลมฉบัง 109","zone":"Zone13","regional":"Regional 3","manager":"คุณ เสถียร ผลขาว"},{"num":"110","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาประจวบคีรีขันธ์ 110","zone":"Zone15","regional":"Regional 3","manager":"คุณ วรรณิภา บุญจริง"},{"num":"111","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเพชรเกษม 111","zone":"Zone6","regional":"Regional 2","manager":"คุณ ภกรณ์กาญจ์ เมทินีพิศาลกุล"},{"num":"112","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาบางปู 112","zone":"Zone8","regional":"Regional 2","manager":"คุณ ศุจิกา พงษากาล"},{"num":"113","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาวังหิน 113","zone":"Zone9","regional":"Regional 2","manager":"คุณ เอกธัช นาวิกบุตร"},{"num":"114","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสิงห์บุรี 114","zone":"Zone5","regional":"Regional 1","manager":"คุณ ลัดดาวัลย์ ธรรมศร"},{"num":"115","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาบางบัวทอง 115","zone":"Zone7","regional":"Regional 2","manager":"คุณ ธนกร วุฒิเดชเกรียงไกร"},{"num":"116","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขากาฬสินธุ์ 116","zone":"Zone4","regional":"Regional 1","manager":"คุณ สุมาลี หาญสว่าง"},{"num":"117","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาอุดมสุข 117","zone":"Zone10","regional":"Regional 2","manager":"คุณ อารีย์ นิ่มกลาง"},{"num":"118","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขารามคำแหง(สัมมากร) 118","zone":"Zone9","regional":"Regional 2","manager":"คุณ เอกธัช นาวิกบุตร"},{"num":"119","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาพิจิตร 119","zone":"Zone5","regional":"Regional 1","manager":"คุณ ลัดดาวัลย์ ธรรมศร"},{"num":"120","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาปทุมธานี 120","zone":"Zone7","regional":"Regional 2","manager":"คุณ ธนกร วุฒิเดชเกรียงไกร"},{"num":"121","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาบดินทรเดชา 121","zone":"Zone9","regional":"Regional 2","manager":"คุณ เอกธัช นาวิกบุตร"},{"num":"122","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาประชาอุทิศ 122","zone":"Zone8","regional":"Regional 2","manager":"คุณ ศุจิกา พงษากาล"},{"num":"123","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสุขุมวิท71 123","zone":"Zone8","regional":"Regional 2","manager":"คุณ ศุจิกา พงษากาล"},{"num":"124","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขานวมินทร์70 124","zone":"Zone9","regional":"Regional 2","manager":"คุณ เอกธัช นาวิกบุตร"},{"num":"125","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาชะอำ 125","zone":"Zone15","regional":"Regional 3","manager":"คุณ วรรณิภา บุญจริง"},{"num":"126","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาอ่อนนุช 126","zone":"Zone10","regional":"Regional 2","manager":"คุณ อารีย์ นิ่มกลาง"},{"num":"127","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสุขสวัสดิ์ 127","zone":"Zone8","regional":"Regional 2","manager":"คุณ ศุจิกา พงษากาล"},{"num":"128","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขากบินทร์บุรี 128","zone":"Zone12","regional":"Regional 3","manager":"คุณ พจนีย์ กลั่นเขตกิจ"},{"num":"129","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาลาดกระบัง 129","zone":"Zone13","regional":"Regional 3","manager":"คุณ เสถียร ผลขาว"},{"num":"130","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขานาทองเจริญ 130","zone":"Zone12","regional":"Regional 3","manager":"คุณ พจนีย์ กลั่นเขตกิจ"},{"num":"131","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาบ่อวิน 131","zone":"Zone14","regional":"Regional 3","manager":"คุณ รัตวัชร์ พงศ์วัจนาทิน"},{"num":"132","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสัตหีบ 132","zone":"Zone14","regional":"Regional 3","manager":"คุณ รัตวัชร์ พงศ์วัจนาทิน"},{"num":"133","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขารามคำแหง24 133","zone":"Zone10","regional":"Regional 2","manager":"คุณ อารีย์ นิ่มกลาง"},{"num":"134","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาอมตะนคร 134","zone":"Zone13","regional":"Regional 3","manager":"คุณ เสถียร ผลขาว"},{"num":"135","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาบางคอแหลม 135","zone":"Zone8","regional":"Regional 2","manager":"คุณ ศุจิกา พงษากาล"},{"num":"136","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาขอนแก่น2 136","zone":"Zone4","regional":"Regional 1","manager":"คุณ สุมาลี หาญสว่าง"},{"num":"137","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาวงศกร2 137","zone":"Zone10","regional":"Regional 2","manager":"คุณ อารีย์ นิ่มกลาง"},{"num":"138","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเหม่งจ๋าย 138","zone":"Zone10","regional":"Regional 2","manager":"คุณ อารีย์ นิ่มกลาง"},{"num":"139","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสุขุมวิท22 139","zone":"Zone10","regional":"Regional 2","manager":"คุณ อารีย์ นิ่มกลาง"},{"num":"140","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาถนนจันทน์ 140","zone":"Zone7","regional":"Regional 2","manager":"คุณ ธนกร วุฒิเดชเกรียงไกร"},{"num":"141","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาลำลูกกา 141","zone":"Zone12","regional":"Regional 3","manager":"คุณ พจนีย์ กลั่นเขตกิจ"},{"num":"142","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาแพรกษา 142","zone":"Zone8","regional":"Regional 2","manager":"คุณ ศุจิกา พงษากาล"},{"num":"143","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาประดิษฐ์มนูธรรม 143","zone":"Zone9","regional":"Regional 2","manager":"คุณ เอกธัช นาวิกบุตร"},{"num":"144","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาตลาดรุ่งโรจน์(คลอง4) 144","zone":"Zone12","regional":"Regional 3","manager":"คุณ พจนีย์ กลั่นเขตกิจ"},{"num":"145","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาพงษ์เพชร 145","zone":"Zone7","regional":"Regional 2","manager":"คุณ ธนกร วุฒิเดชเกรียงไกร"},{"num":"146","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาอุตรดิตถ์ 146","zone":"Zone2","regional":"Regional 1","manager":"คุณ ธีระพงษ์ อินจุ้มสาย"},{"num":"147","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเมืองทอง 147","zone":"Zone9","regional":"Regional 2","manager":"คุณ เอกธัช นาวิกบุตร"},{"num":"148","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเลียบคลอง2 148","zone":"Zone13","regional":"Regional 3","manager":"คุณ เสถียร ผลขาว"},{"num":"149","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาอ้อมน้อย 149","zone":"Zone6","regional":"Regional 2","manager":"คุณ ภกรณ์กาญจ์ เมทินีพิศาลกุล"},{"num":"150","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสนามบินน้ำ 150","zone":"Zone7","regional":"Regional 2","manager":"คุณ ธนกร วุฒิเดชเกรียงไกร"},{"num":"151","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเทพรักษ์ 151","zone":"Zone9","regional":"Regional 2","manager":"คุณ เอกธัช นาวิกบุตร"},{"num":"152","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสมุทรสงคราม 152","zone":"Zone6","regional":"Regional 2","manager":"คุณ ภกรณ์กาญจ์ เมทินีพิศาลกุล"},{"num":"153","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเวียงสระ 153","zone":"Zone17","regional":"Regional 4","manager":"คุณ พงศิกร รังษีพลาสวัสดิ์"},{"num":"154","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาปราจีนบุรี 154","zone":"Zone12","regional":"Regional 3","manager":"คุณ พจนีย์ กลั่นเขตกิจ"},{"num":"155","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาปิ่นเกล้า 155","zone":"Zone7","regional":"Regional 2","manager":"คุณ ธนกร วุฒิเดชเกรียงไกร"},{"num":"156","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสมุทรปราการ 156","zone":"Zone8","regional":"Regional 2","manager":"คุณ ศุจิกา พงษากาล"},{"num":"157","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขานครราชสีมา3 (เซฟวัน) 157","zone":"Zone11","regional":"Regional 3","manager":"คุณ ณัฐวัฒน์ เดชโนนสังข์"},{"num":"158","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขานครสวรรค์ 2 (พรหมนิมิต) 158","zone":"Zone5","regional":"Regional 1","manager":"คุณ ลัดดาวัลย์ ธรรมศร"},{"num":"159","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาอุดรธานี 2 (บ้านเลื่อม) 159","zone":"Zone3","regional":"Regional 1","manager":"คุณ มะลิวัลย์ โขงชัยภูมิ"},{"num":"160","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขามหาชัย 160","zone":"Zone6","regional":"Regional 2","manager":"คุณ ภกรณ์กาญจ์ เมทินีพิศาลกุล"},{"num":"161","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาขอนแก่น3 (บ้านโนนม่วง) 161","zone":"Zone4","regional":"Regional 1","manager":"คุณ สุมาลี หาญสว่าง"},{"num":"162","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาอมตะนคร 2 162","zone":"Zone13","regional":"Regional 3","manager":"คุณ เสถียร ผลขาว"},{"num":"163","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาสงขลา 163","zone":"Zone17","regional":"Regional 4","manager":"คุณ พงศิกร รังษีพลาสวัสดิ์"},{"num":"164","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาชัยนาท 164","zone":"Zone5","regional":"Regional 1","manager":"คุณ ลัดดาวัลย์ ธรรมศร"},{"num":"165","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาถนนศรีอยุธยา 165","zone":"Zone10","regional":"Regional 2","manager":"คุณ อารีย์ นิ่มกลาง"},{"num":"166","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาราไวย์ 2 166","zone":"Zone16","regional":"Regional 4","manager":"คุณ บุษรา ไชยเสน"},{"num":"167","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาเชียงใหม่ (จอมทอง) 167","zone":"Zone1","regional":"Regional 1","manager":"คุณ พิชิต คันธาเวช"},{"num":"168","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาบ้านบึง (ชลบุรี) 168","zone":"Zone13","regional":"Regional 3","manager":"คุณ เสถียร ผลขาว"},{"num":"169","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาพังงา 169","zone":"Zone15","regional":"Regional 3","manager":"คุณ วรรณิภา บุญจริง"},{"num":"170","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาอำนาจเจริญ 170","zone":"Zone11","regional":"Regional 3","manager":"คุณ ณัฐวัฒน์ เดชโนนสังข์"},{"num":"171","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาจอหอ (นครราชสีมา) 171","zone":"Zone11","regional":"Regional 3","manager":"คุณ ณัฐวัฒน์ เดชโนนสังข์"},{"num":"172","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาบ้านไผ่ 172","zone":"Zone4","regional":"Regional 1","manager":"คุณ สุมาลี หาญสว่าง"},{"num":"175","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาแฮปปี้แทท (ฟอเรสเทียส์ - บางนา) 175","zone":"Zone8","regional":"Regional 2","manager":"คุณ ศุจิกา พงษากาล"},{"num":"301","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาพระราม4 301","zone":"Zone7","regional":"Regional 2","manager":"คุณ ธนกร วุฒิเดชเกรียงไกร"},{"num":"303","name":"บมจ.ซีพี แอ็กซ์ตร้า สาขาศิริมังคลาจารย์ 303","zone":"Zone1","regional":"Regional 1","manager":"คุณ พิชิต คันธาเวช"}];
 
 const WF_TEMPLATE = [
-  {sec:"Fresh Food",id:"fv",label:"Fruit & Vegetable (FV)",plan:0,actual:0,remark:""},
-  {sec:"Fresh Food",id:"but",label:"Butchery (BUT)",plan:0,actual:0,remark:""},
-  {sec:"Fresh Food",id:"fish",label:"Fish",plan:0,actual:0,remark:""},
-  {sec:"Fresh Food",id:"bakery",label:"Bakery",plan:0,actual:0,remark:""},
-  {sec:"Fresh Food",id:"frozen",label:"Frozen & Dairy",plan:0,actual:0,remark:""},
+  {sec:"Fresh Food",id:"fv",label:"Fruit & Vegetable (FV)",plan:0,actual:0,remark:"",isFreshSub:true},
+  {sec:"Fresh Food",id:"but",label:"Butchery (BUT)",plan:0,actual:0,remark:"",isFreshSub:true},
+  {sec:"Fresh Food",id:"fish",label:"Fish",plan:0,actual:0,remark:"",isFreshSub:true},
+  {sec:"Fresh Food",id:"bakery",label:"Bakery",plan:0,actual:0,remark:"",isFreshSub:true},
+  {sec:"Fresh Food",id:"frozen",label:"Frozen & Dairy",plan:0,actual:0,remark:"",isFreshSub:true},
+  {sec:"Fresh Food",id:"fresh",label:"Total : Fresh Food",plan:0,actual:0,remark:"",isFreshTotal:true},
   {sec:"Dry Food",id:"dry",label:"Total : Dry Food",plan:0,actual:0,remark:""},
   {sec:"Non Food",id:"nf",label:"Total : Non Food",plan:0,actual:0,remark:""},
   {sec:"Operations",id:"o2o_picker",label:"Picker / Packer",plan:0,actual:0,remark:"",isO2OSub:true},
@@ -985,6 +988,7 @@ let selBranch = null;
 let wfRows = [];
 let records = [];
 let delId = null;
+let editId = null;
 let chReg = null, chRate = null, chZone = null, chBranch = null;
 let dbRef = null;
 
@@ -1159,6 +1163,8 @@ function filterBranches() {
 }
 
 function selectBranch(b) {
+  // If was in edit mode, exit it (selecting a new branch creates a new record)
+  if (editId !== null) exitEditMode();
   selBranch = b;
   wfRows = JSON.parse(JSON.stringify(WF_TEMPLATE));
   document.getElementById('step1').style.display = 'none';
@@ -1204,17 +1210,33 @@ function renderWFTable() {
           +'<div class="wf-cell tr fw6 '+dc+'" id="d'+idx+'">'+dt+'</div>'
           +'<div class="wf-cell"></div>'
           +'</div>';
+      } else if (row.isFreshTotal) {
+        html += '<div class="wf-row wf-total" style="grid-template-columns:'+COLS+';background:#DCFCE7;border-top:2px solid #16A34A">'
+          +'<div class="wf-cell fw6" style="color:#14532D">'+esc(row.label)+'</div>'
+          +'<div class="wf-cell tr fw6" id="fresh-tp">'+(row.plan||0)+'</div>'
+          +'<div class="wf-cell tr fw6" id="fresh-ta">'+(row.actual||0)+'</div>'
+          +'<div class="wf-cell tr fw6 '+dc+'" id="d'+idx+'">'+dt+'</div>'
+          +'<div class="wf-cell"></div>'
+          +'</div>';
       } else if (row.isO2OSub) {
         html += '<div class="wf-row" style="grid-template-columns:'+COLS+';background:#FFFDE7">'
-          +'<div class="wf-cell"><input class="le" value="'+esc(row.label)+'" data-f="label" data-i="'+idx+'" style="color:#E65100;font-weight:500"></div>'
+          +'<div class="wf-cell"><input class="le" value="'+esc(row.label)+'" data-f="label" data-i="'+idx+'" style="color:#E65100;font-weight:500" readonly></div>'
           +'<div class="wf-cell tr"><input class="ie" type="number" min="0" value="'+(row.plan||0)+'" data-f="plan" data-i="'+idx+'" style="border-color:#F9A825"></div>'
           +'<div class="wf-cell tr"><input class="ie" type="number" min="0" value="'+(row.actual||0)+'" data-f="actual" data-i="'+idx+'" style="border-color:#F9A825"></div>'
           +'<div class="wf-cell tr '+dc+'" id="d'+idx+'">'+dt+'</div>'
           +'<div class="wf-cell"><input class="le" value="'+esc(row.remark)+'" data-f="remark" data-i="'+idx+'" placeholder="หมายเหตุ..."></div>'
           +'</div>';
+      } else if (row.isFreshSub) {
+        html += '<div class="wf-row" style="grid-template-columns:'+COLS+';background:#F0FDF4">'
+          +'<div class="wf-cell"><input class="le" value="'+esc(row.label)+'" data-f="label" data-i="'+idx+'" style="color:#166534;font-weight:500" readonly></div>'
+          +'<div class="wf-cell tr"><input class="ie" type="number" min="0" value="'+(row.plan||0)+'" data-f="plan" data-i="'+idx+'" style="border-color:#16A34A"></div>'
+          +'<div class="wf-cell tr"><input class="ie" type="number" min="0" value="'+(row.actual||0)+'" data-f="actual" data-i="'+idx+'" style="border-color:#16A34A"></div>'
+          +'<div class="wf-cell tr '+dc+'" id="d'+idx+'">'+dt+'</div>'
+          +'<div class="wf-cell"><input class="le" value="'+esc(row.remark)+'" data-f="remark" data-i="'+idx+'" placeholder="หมายเหตุ..."></div>'
+          +'</div>';
       } else {
         html += '<div class="wf-row" style="grid-template-columns:'+COLS+'">'
-          +'<div class="wf-cell"><input class="le" value="'+esc(row.label)+'" data-f="label" data-i="'+idx+'"></div>'
+          +'<div class="wf-cell"><input class="le" value="'+esc(row.label)+'" data-f="label" data-i="'+idx+'" readonly></div>'
           +'<div class="wf-cell tr"><input class="ie" type="number" min="0" value="'+(row.plan||0)+'" data-f="plan" data-i="'+idx+'"></div>'
           +'<div class="wf-cell tr"><input class="ie" type="number" min="0" value="'+(row.actual||0)+'" data-f="actual" data-i="'+idx+'"></div>'
           +'<div class="wf-cell tr '+dc+'" id="d'+idx+'">'+dt+'</div>'
@@ -1224,8 +1246,8 @@ function renderWFTable() {
     });
   });
 
-  const tp = wfRows.reduce((s,r)=>s+(r.isO2OSub?0:(+r.plan||0)),0);
-  const ta = wfRows.reduce((s,r)=>s+(r.isO2OSub?0:(+r.actual||0)),0);
+  const tp = wfRows.reduce((s,r)=>s+((r.isO2OSub||r.isFreshSub)?0:(+r.plan||0)),0);
+  const ta = wfRows.reduce((s,r)=>s+((r.isO2OSub||r.isFreshSub)?0:(+r.actual||0)),0);
   const td = ta-tp;
   const tdc = td<0?'diff-n':td>0?'diff-p':'diff-z';
   html += '<div class="wf-row wf-total" style="grid-template-columns:'+COLS+'">'
@@ -1238,6 +1260,7 @@ function renderWFTable() {
 
   con.innerHTML = html;
   updO2OTotal();
+  updFreshTotal();
 
   con.querySelectorAll('input[data-f]').forEach(inp => {
     inp.addEventListener('input', () => {
@@ -1259,6 +1282,8 @@ function updDiff(idx) {
   el.className = 'wf-cell tr '+(diff<0?'diff-n':diff>0?'diff-p':'diff-z');
   // If editing an O2O sub-row, update Total O2O
   if (wfRows[idx].isO2OSub) updO2OTotal();
+  // If editing a Fresh sub-row, update Total Fresh
+  if (wfRows[idx].isFreshSub) updFreshTotal();
 }
 
 function updO2OTotal() {
@@ -1283,10 +1308,32 @@ function updO2OTotal() {
   }
 }
 
+function updFreshTotal() {
+  // Sum all Fresh sub rows
+  const subs = wfRows.filter(r=>r.isFreshSub);
+  const totRow = wfRows.find(r=>r.isFreshTotal);
+  if (!totRow) return;
+  const sp = subs.reduce((s,r)=>s+(+r.plan||0),0);
+  const sa = subs.reduce((s,r)=>s+(+r.actual||0),0);
+  totRow.plan = sp;
+  totRow.actual = sa;
+  const elTp = document.getElementById('fresh-tp');
+  const elTa = document.getElementById('fresh-ta');
+  if (elTp) elTp.textContent = sp;
+  if (elTa) elTa.textContent = sa;
+  const diff = sa - sp;
+  const totIdx = wfRows.indexOf(totRow);
+  const elD = document.getElementById('d'+totIdx);
+  if (elD) {
+    elD.textContent = diff>0?'+'+diff:diff;
+    elD.className = 'wf-cell tr fw6 '+(diff<0?'diff-n':diff>0?'diff-p':'diff-z');
+  }
+}
+
 function updTotals() {
-  // Grand total excludes O2O sub-rows (use Total O2O instead to avoid double count)
-  const tp = wfRows.reduce((s,r)=>s+(r.isO2OSub?0:(+r.plan||0)),0);
-  const ta = wfRows.reduce((s,r)=>s+(r.isO2OSub?0:(+r.actual||0)),0);
+  // Grand total excludes O2O & Fresh sub-rows (use Total rows instead to avoid double count)
+  const tp = wfRows.reduce((s,r)=>s+((r.isO2OSub||r.isFreshSub)?0:(+r.plan||0)),0);
+  const ta = wfRows.reduce((s,r)=>s+((r.isO2OSub||r.isFreshSub)?0:(+r.actual||0)),0);
   const td = ta-tp;
   document.getElementById('tp').textContent = tp;
   document.getElementById('ta').textContent = ta;
@@ -1309,10 +1356,17 @@ function saveRecord() {
   if (!wfRows || wfRows.length === 0) { toast('ไม่มีข้อมูลตารางกำลังคน','err'); return; }
 
   // Build record
-  const tp = wfRows.reduce((s,r)=>s+(r.isO2OSub?0:(+r.plan||0)),0);
-  const ta = wfRows.reduce((s,r)=>s+(r.isO2OSub?0:(+r.actual||0)),0);
+  const tp = wfRows.reduce((s,r)=>s+((r.isO2OSub||r.isFreshSub)?0:(+r.plan||0)),0);
+  const ta = wfRows.reduce((s,r)=>s+((r.isO2OSub||r.isFreshSub)?0:(+r.actual||0)),0);
+
+  // Check if in edit mode
+  const isEdit = editId !== null;
+  const existingRec = isEdit ? records.find(r=>r.id===editId) : null;
+  const existingFbKey = existingRec ? existingRec._fbKey : null;
+
   const rec = {
-    id: Date.now(), date, time,
+    id: isEdit ? editId : Date.now(),
+    date, time,
     branchNum: selBranch.num, branchName: selBranch.name,
     zone: selBranch.zone, regional: selBranch.regional, manager: selBranch.manager,
     totalPlan: tp, totalActual: ta, diff: ta-tp,
@@ -1320,9 +1374,11 @@ function saveRecord() {
   };
 
   const btn = document.getElementById('btn-save');
-  const origHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>บันทึกข้อมูล';
+  const origHTML = isEdit
+    ? '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>อัปเดตข้อมูล'
+    : '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>บันทึกข้อมูล';
   btn.disabled = true;
-  btn.innerHTML = '⏳ กำลังบันทึก...';
+  btn.innerHTML = isEdit ? '⏳ กำลังอัปเดต...' : '⏳ กำลังบันทึก...';
 
   // Timeout guard: ถ้า Firebase ไม่ตอบใน 8 วินาที บันทึกในเครื่องแทน
   let done = false;
@@ -1330,7 +1386,12 @@ function saveRecord() {
     if (done) return;
     done = true;
     console.warn('Firebase timeout — saving locally');
-    records.unshift(rec);
+    if (isEdit) {
+      const i = records.findIndex(r=>r.id===editId);
+      if (i>=0) records[i] = {...rec, _fbKey: existingFbKey};
+    } else {
+      records.unshift(rec);
+    }
     try { localStorage.setItem('wf_v2', JSON.stringify(records)); } catch(e) {}
     renderHistory();
     toast('⚠️ Firebase ไม่ตอบสนอง — บันทึกในเครื่องชั่วคราวแล้ว', 'err');
@@ -1338,15 +1399,28 @@ function saveRecord() {
     btn.innerHTML = origHTML;
   }, 8000);
 
-  // Firebase push
+  // Firebase push or update
   try {
-    db.ref('records').push(rec)
+    const fbPromise = (isEdit && existingFbKey)
+      ? db.ref('records/'+existingFbKey).set(rec)
+      : db.ref('records').push(rec);
+
+    fbPromise
       .then(() => {
         if (done) return;
         done = true;
         clearTimeout(timeoutId);
         try { localStorage.setItem('wf_v2', JSON.stringify(records)); } catch(e) {}
-        toast('✅ บันทึกสาขา '+selBranch.num+' เรียบร้อย','ok');
+        if (isEdit) {
+          toast('✅ อัปเดตข้อมูลสาขา '+selBranch.num+' เรียบร้อย','ok');
+          // Exit edit mode and go back to history
+          exitEditMode();
+          // Switch to history tab
+          const histNav = document.querySelector('.nav-item[data-page="history"]');
+          if (histNav) histNav.click();
+        } else {
+          toast('✅ บันทึกสาขา '+selBranch.num+' เรียบร้อย','ok');
+        }
         btn.disabled = false;
         btn.innerHTML = origHTML;
       })
@@ -1355,7 +1429,12 @@ function saveRecord() {
         done = true;
         clearTimeout(timeoutId);
         console.error('Firebase push error:', err);
-        records.unshift(rec);
+        if (isEdit) {
+          const i = records.findIndex(r=>r.id===editId);
+          if (i>=0) records[i] = {...rec, _fbKey: existingFbKey};
+        } else {
+          records.unshift(rec);
+        }
         try { localStorage.setItem('wf_v2', JSON.stringify(records)); } catch(e) {}
         renderHistory();
         toast('⚠️ บันทึกในเครื่องชั่วคราว ('+(err.code||err.message)+')', 'err');
@@ -1367,13 +1446,108 @@ function saveRecord() {
     done = true;
     clearTimeout(timeoutId);
     console.error('Firebase exception:', e);
-    records.unshift(rec);
+    if (isEdit) {
+      const i = records.findIndex(r=>r.id===editId);
+      if (i>=0) records[i] = {...rec, _fbKey: existingFbKey};
+    } else {
+      records.unshift(rec);
+    }
     try { localStorage.setItem('wf_v2', JSON.stringify(records)); } catch(ex) {}
     renderHistory();
     toast('⚠️ บันทึกในเครื่องชั่วคราว (ไม่สามารถเชื่อมต่อ Firebase)','err');
     btn.disabled = false;
     btn.innerHTML = origHTML;
   }
+}
+
+// EDIT RECORD - Load existing record into the edit form
+function editRecord(id) {
+  if (currentUser && currentUser.role !== 'admin') {
+    toast('⚠️ คุณไม่มีสิทธิ์แก้ไขข้อมูล', 'err'); return;
+  }
+  const rec = records.find(r=>r.id===id);
+  if (!rec) { toast('ไม่พบข้อมูล', 'err'); return; }
+
+  editId = id;
+
+  // Switch to record page
+  const recNav = document.querySelector('.nav-item[data-page="record"]');
+  if (recNav) recNav.click();
+
+  // Find branch
+  const b = BRANCHES.find(x=>x.num===rec.branchNum) || {
+    num: rec.branchNum, name: rec.branchName,
+    zone: rec.zone, regional: rec.regional, manager: rec.manager||''
+  };
+  selBranch = b;
+
+  // Load data into wfRows; merge with template to ensure all rows exist
+  // Build a map from saved rows by id
+  const savedMap = {};
+  (rec.rows || []).forEach(r => { savedMap[r.id] = r; });
+
+  // Use template structure but overlay saved values
+  wfRows = WF_TEMPLATE.map(t => {
+    const saved = savedMap[t.id];
+    if (saved) {
+      return {...t, plan: +saved.plan||0, actual: +saved.actual||0, remark: saved.remark||''};
+    }
+    return JSON.parse(JSON.stringify(t));
+  });
+
+  // Set date/time
+  document.getElementById('rec-date').value = rec.date;
+  document.getElementById('rec-time').value = rec.time;
+
+  // Show step 2 with branch info
+  document.getElementById('step1').style.display = 'none';
+  document.getElementById('step2').style.display = 'block';
+  document.getElementById('sel-badge').textContent = b.num;
+  document.getElementById('sel-name').textContent = b.name.replace('บมจ.ซีพี แอ็กซ์ตร้า สาขา','');
+  document.getElementById('sel-detail').textContent = (b.zone||'')+' · '+(b.regional||'')+' · '+(b.manager||'');
+  document.getElementById('wf-lbl').textContent = 'สาขา '+b.num;
+  document.getElementById('wf-date-badge').textContent = fmtDate(rec.date);
+  document.getElementById('wf-time-badge').textContent = '⏰ '+rec.time;
+
+  renderWFTable();
+
+  // Update save button to show edit mode + show edit-mode banner
+  const btn = document.getElementById('btn-save');
+  btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>อัปเดตข้อมูล';
+
+  showEditBanner(rec);
+  toast('✏️ โหมดแก้ไขข้อมูล - สาขา '+rec.branchNum, 'ok');
+}
+
+function showEditBanner(rec) {
+  let banner = document.getElementById('edit-banner');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'edit-banner';
+    banner.style.cssText = 'background:#FEF3C7;border:1px solid #F59E0B;color:#92400E;padding:10px 16px;border-radius:8px;margin-bottom:14px;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:500';
+    const step2 = document.getElementById('step2');
+    step2.insertBefore(banner, step2.firstChild);
+  }
+  banner.innerHTML = '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>'
+    + '<span>โหมดแก้ไข: กำลังแก้ไขข้อมูลสาขา <b>'+rec.branchNum+'</b> วันที่ <b>'+fmtDate(rec.date)+'</b> ('+rec.time+')</span>'
+    + '<button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="cancelEdit()">ยกเลิกการแก้ไข</button>';
+  banner.style.display = 'flex';
+}
+
+function exitEditMode() {
+  editId = null;
+  const banner = document.getElementById('edit-banner');
+  if (banner) banner.style.display = 'none';
+  const btn = document.getElementById('btn-save');
+  if (btn) btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>บันทึกข้อมูล';
+}
+
+function cancelEdit() {
+  exitEditMode();
+  // Go back to step 1
+  document.getElementById('step1').style.display = 'block';
+  document.getElementById('step2').style.display = 'none';
+  toast('ยกเลิกโหมดแก้ไข');
 }
 
 // HISTORY
@@ -1414,7 +1588,12 @@ function renderHistory() {
     rows += '<td class="tr '+dc+'">'+dt+'</td>';
     rows += '<td class="tr">'+rate+'</td>';
     rows += (currentUser && currentUser.role==='admin'
-      ? '<td><button class="btn btn-outline btn-sm" style="color:var(--err);border-color:var(--err)" onclick="event.stopPropagation();askDel('+r.id+')">ลบ</button></td>'
+      ? '<td><div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">'
+        + '<button class="btn btn-outline btn-sm" style="color:#0d9488;border-color:#0d9488" onclick="event.stopPropagation();editRecord('+r.id+')" title="แก้ไขข้อมูล">'
+        + '<svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>'
+        + 'แก้ไข</button>'
+        + '<button class="btn btn-outline btn-sm" style="color:var(--err);border-color:var(--err)" onclick="event.stopPropagation();askDel('+r.id+')">ลบ</button>'
+        + '</div></td>'
       : '<td></td>');
     rows += '</tr>';
     // Detail expand row
@@ -1437,21 +1616,29 @@ function renderHistory() {
         r.rows.filter(rw=>rw.sec===sec).forEach(rw => {
           const d2=(rw.actual||0)-(rw.plan||0);
           const dc2=d2<0?'#DC2626':d2>0?'#059669':'#9CA3AF';
-          const bg=rw.isO2OTotal?'background:#FFF9C4;':'rw.isO2OSub'?'background:#FFFDE7;':'';
           const isSub=rw.isO2OSub; const isTot=rw.isO2OTotal;
-          const rowBg=isTot?'background:#FFF9C4':'isSub'?'background:#FFFDE7':'';
-          const bg2=isTot?'background:#FFF9C4;':isSub?'background:#FFFDE7;':'';
-          const fw=isTot?'font-weight:700;':'';
+          const isFreshSub=rw.isFreshSub; const isFreshTot=rw.isFreshTotal;
+          let bg2='';
+          if (isTot) bg2='background:#FFF9C4;';
+          else if (isSub) bg2='background:#FFFDE7;';
+          else if (isFreshTot) bg2='background:#DCFCE7;';
+          else if (isFreshSub) bg2='background:#F0FDF4;';
+          const fw=(isTot||isFreshTot)?'font-weight:700;':'';
+          let lblStyle='';
+          if (isSub) lblStyle='color:#E65100;padding-left:22px;';
+          else if (isTot) lblStyle='color:#5D4037;';
+          else if (isFreshSub) lblStyle='color:#166534;padding-left:22px;';
+          else if (isFreshTot) lblStyle='color:#14532D;';
           rows += '<tr style="border-bottom:1px solid #F1F5F9;'+bg2+fw+'">';
-          rows += '<td style="padding:5px 12px;'+(isSub?'color:#E65100;padding-left:22px;':'')+(isTot?'color:#5D4037;':'')+'">'+(isSub?'':'')+esc(rw.label)+'</td>';
+          rows += '<td style="padding:5px 12px;'+lblStyle+'">'+esc(rw.label)+'</td>';
           rows += '<td style="padding:5px 12px;text-align:right">'+(rw.plan||0)+'</td>';
           rows += '<td style="padding:5px 12px;text-align:right">'+(rw.actual||0)+'</td>';
           rows += '<td style="padding:5px 12px;text-align:right;color:'+dc2+'">'+(d2>0?'+'+d2:d2)+'</td>';
           rows += '<td style="padding:5px 12px;color:#6B7280">'+(rw.remark||'—')+'</td></tr>';
         });
       });
-      const gp=r.rows.reduce((s,rw)=>s+(rw.isO2OSub?0:(+rw.plan||0)),0);
-      const ga=r.rows.reduce((s,rw)=>s+(rw.isO2OSub?0:(+rw.actual||0)),0);
+      const gp=r.rows.reduce((s,rw)=>s+((rw.isO2OSub||rw.isFreshSub)?0:(+rw.plan||0)),0);
+      const ga=r.rows.reduce((s,rw)=>s+((rw.isO2OSub||rw.isFreshSub)?0:(+rw.actual||0)),0);
       const gd=ga-gp;
       rows += '<tr style="background:#EEF2FF;font-weight:700">';
       rows += '<td style="padding:7px 12px;color:#0f766e">Grand Total</td>';
@@ -1518,7 +1705,7 @@ function exportXL() {
   f.forEach(r=>{
     if (!r.rows) return;
     r.rows.forEach(row=>{
-      const lbl = row.isO2OSub ? '    '+row.label : row.label;
+      const lbl = (row.isO2OSub || row.isFreshSub) ? '    '+row.label : row.label;
       detD.push([fmtDateXL(r.date),r.time,r.branchNum,r.branchName,r.zone,r.regional,row.sec,lbl,row.plan||0,row.actual||0,(row.actual||0)-(row.plan||0),row.remark||'']);
     });
   });
@@ -1654,38 +1841,65 @@ function drawBranchChart(f, bNum) {
     '<div style="background:'+dbg+';border-radius:8px;padding:10px 14px;min-width:100px"><div style="font-size:11px;color:'+dc+';font-weight:700;text-transform:uppercase">ขาด/เกิน</div><div style="font-size:22px;font-weight:700;color:'+dc+'">'+(diff>0?'+'+diff:diff)+'</div><div style="font-size:11px;color:#6B7280">คน</div></div>'+
     '<div style="background:#FFFBEB;border-radius:8px;padding:10px 14px;min-width:100px"><div style="font-size:11px;color:#D97706;font-weight:700;text-transform:uppercase">อัตรา</div><div style="font-size:22px;font-weight:700;color:'+rc+'">'+rate+'%</div><div style="font-size:11px;color:#6B7280">% มาทำงาน</div></div>';
 
-  const chartRows = items[0].rows ? items[0].rows.filter(r=>!r.isO2OSub) : [];
-  const rowLabels = chartRows.map(r=>r.label);
-  const planVals = chartRows.map(r=>+r.plan||0);
-  const actualVals = chartRows.map(r=>+r.actual||0);
+  // แสดงทุกแผนกย่อย: ตัดเฉพาะ Total rows ออก (isFreshTotal, isO2OTotal)
+  const allRows = items[0].rows ? items[0].rows : [];
+  const chartRows = allRows.filter(r => !r.isFreshTotal && !r.isO2OTotal);
+
+  // สีตามหมวด — plan bar
+  const SEC_PLAN_COLOR = {
+    'Fresh Food':  '#34d399', // เขียวสด
+    'Dry Food':    '#fbbf24', // เหลือง
+    'Non Food':    '#f472b6', // ชมพู
+    'Operations':  '#60a5fa', // ฟ้า (O2OSub + ops ทั่วไป)
+  };
+  // สีแยก O2O sub ให้ชัดขึ้น
+  const planColors = chartRows.map(r => {
+    if (r.isO2OSub) return '#818cf8'; // ม่วง
+    return SEC_PLAN_COLOR[r.sec] || '#5eead4';
+  });
+
+  const rowLabels  = chartRows.map(r => r.label);
+  const planVals   = chartRows.map(r => +r.plan   || 0);
+  const actualVals = chartRows.map(r => +r.actual || 0);
+
+  // Plugin: ตัวเลข + % บนแท่ง actual
   const topPlugin = {
-    id:'topBranch',
+    id: 'topBranch',
     afterDatasetsDraw(chart) {
-      const ctx2=chart.ctx;
-      chart.data.datasets.forEach((ds,di)=>{
-        const meta=chart.getDatasetMeta(di);
-        meta.data.forEach((bar,idx)=>{
-          const v=ds.data[idx];
+      const ctx2 = chart.ctx;
+      chart.data.datasets.forEach((ds, di) => {
+        chart.getDatasetMeta(di).data.forEach((bar, idx) => {
+          const v = ds.data[idx];
           if (!v) return;
-          const barTop=bar.y;
           ctx2.save();
-          ctx2.textAlign='center';
-          ctx2.textBaseline='bottom';
-          if (di===0) {
-            ctx2.font='600 11px Sarabun,sans-serif';
-            ctx2.fillStyle='#0f766e';
-            ctx2.fillText(v, bar.x, barTop-3);
+          ctx2.textAlign = 'center';
+          ctx2.textBaseline = 'bottom';
+          const barTop = bar.y;
+          if (di === 0) {
+            // แท่ง plan: แสดงตัวเลข
+            ctx2.font = '600 11px Sarabun,sans-serif';
+            ctx2.fillStyle = '#374151';
+            ctx2.fillText(v, bar.x, barTop - 2);
           } else {
-            ctx2.font='700 11px Sarabun,sans-serif';
-            ctx2.fillStyle='#0f766e';
-            ctx2.fillText(v, bar.x, barTop-3);
-            const pV=planVals[idx];
-            if (pV>0) {
-              const pct=Math.round(actualVals[idx]/pV*100);
-              const pc=pct>=95?'#059669':pct>=80?'#D97706':'#DC2626';
-              ctx2.font='700 10px Sarabun,sans-serif';
-              ctx2.fillStyle=pc;
-              ctx2.fillText(pct+'%', bar.x, barTop-16);
+            // แท่ง actual: แสดงตัวเลข
+            ctx2.font = '700 11px Sarabun,sans-serif';
+            ctx2.fillStyle = '#111827';
+            ctx2.fillText(v, bar.x, barTop - 2);
+            // % อัตราเหนือตัวเลข
+            const pV = planVals[idx];
+            if (pV > 0) {
+              const pct = Math.round(actualVals[idx] / pV * 100);
+              const diff = actualVals[idx] - pV;
+              const pc = pct >= 100 ? '#059669' : pct >= 95 ? '#0d9488' : pct >= 80 ? '#D97706' : '#DC2626';
+              ctx2.font = '700 10px Sarabun,sans-serif';
+              ctx2.fillStyle = pc;
+              ctx2.fillText(pct + '%', bar.x, barTop - 14);
+              // ขาด/เกิน เหนือ %
+              if (diff !== 0) {
+                ctx2.font = '600 9px Sarabun,sans-serif';
+                ctx2.fillStyle = diff > 0 ? '#059669' : '#DC2626';
+                ctx2.fillText((diff > 0 ? '+' : '') + diff, bar.x, barTop - 26);
+              }
             }
           }
           ctx2.restore();
@@ -1694,11 +1908,144 @@ function drawBranchChart(f, bNum) {
     }
   };
 
+  // Plugin: เส้นแบ่งกลุ่ม section
+  const secDivPlugin = {
+    id: 'secDiv',
+    afterDraw(chart) {
+      const ctx2 = chart.ctx;
+      const xAxis = chart.scales.x;
+      const yAxis = chart.scales.y;
+      let prevSec = null;
+      chartRows.forEach((r, i) => {
+        if (prevSec && r.sec !== prevSec) {
+          const x = (xAxis.getPixelForTick(i - 1) + xAxis.getPixelForTick(i)) / 2;
+          ctx2.save();
+          ctx2.strokeStyle = '#d1d5db';
+          ctx2.lineWidth = 1;
+          ctx2.setLineDash([4, 3]);
+          ctx2.beginPath();
+          ctx2.moveTo(x, yAxis.top);
+          ctx2.lineTo(x, yAxis.bottom);
+          ctx2.stroke();
+          ctx2.restore();
+        }
+        prevSec = r.sec;
+      });
+    }
+  };
+
+  // Plugin: label หมวด บน x-axis
+  const secLabelPlugin = {
+    id: 'secLabel',
+    afterDraw(chart) {
+      const ctx2 = chart.ctx;
+      const xAxis = chart.scales.x;
+      const yAxis = chart.scales.y;
+      const SEC_LABEL_COLOR = {
+        'Fresh Food': '#065f46', 'Dry Food': '#92400e',
+        'Non Food': '#9d174d', 'Operations': '#1e3a8a'
+      };
+      // หา range ของแต่ละ section
+      const secMap = {};
+      chartRows.forEach((r, i) => {
+        if (!secMap[r.sec]) secMap[r.sec] = { start: i, end: i };
+        else secMap[r.sec].end = i;
+      });
+      Object.entries(secMap).forEach(([sec, {start, end}]) => {
+        const x1 = xAxis.getPixelForTick(start);
+        const x2 = xAxis.getPixelForTick(end);
+        const cx = (x1 + x2) / 2;
+        ctx2.save();
+        ctx2.font = '700 10px Sarabun,sans-serif';
+        ctx2.fillStyle = SEC_LABEL_COLOR[sec] || '#374151';
+        ctx2.textAlign = 'center';
+        ctx2.textBaseline = 'bottom';
+        ctx2.fillText(sec, cx, yAxis.bottom + 46);
+        ctx2.restore();
+      });
+    }
+  };
+
+  // สร้าง dataset plan ด้วยสีรายแท่ง
+  const planDataset = {
+    label: 'ตามตารางกะ',
+    data: planVals,
+    backgroundColor: planColors,
+    borderRadius: 4,
+    borderSkipped: false
+  };
+  // dataset actual: สีตาม % performance
+  const actualColors = chartRows.map((r, i) => {
+    const pV = planVals[i];
+    if (!pV) return '#6b7280';
+    const pct = actualVals[i] / pV * 100;
+    return pct >= 100 ? '#065f46' : pct >= 95 ? '#059669' : pct >= 80 ? '#d97706' : '#dc2626';
+  });
+  const actualDataset = {
+    label: 'มาทำงานจริง',
+    data: actualVals,
+    backgroundColor: actualColors,
+    borderRadius: 4,
+    borderSkipped: false
+  };
+
   if (chBranch) chBranch.destroy();
-  chBranch = new Chart(document.getElementById('ch-branch'), {
-    type:'bar', plugins:[topPlugin],
-    data:{labels:rowLabels,datasets:[{label:'Bตามตารางกะ',data:planVals,backgroundColor:'#5eead4',borderRadius:4},{label:'มาทำงานจริง',data:actualVals,backgroundColor:'#0f766e',borderRadius:4}]},
-    options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:40}},plugins:{legend:{display:true,position:'top',labels:{font:{family:'Sarabun,sans-serif',size:12},boxWidth:12,boxHeight:12}}},scales:{x:{ticks:{font:{family:'Sarabun,sans-serif',size:11},maxRotation:30}},y:{beginAtZero:true,ticks:{font:{family:'Sarabun,sans-serif'}}}}}
+  const canvasEl = document.getElementById('ch-branch');
+  // ปรับความสูง canvas ตามจำนวนแท่ง
+  const barCount = chartRows.length;
+  const canvasH = Math.max(320, barCount * 38 + 100);
+  canvasEl.style.height = canvasH + 'px';
+
+  chBranch = new Chart(canvasEl, {
+    type: 'bar',
+    plugins: [topPlugin, secDivPlugin, secLabelPlugin],
+    data: { labels: rowLabels, datasets: [planDataset, actualDataset] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 45, bottom: 20 } },
+      plugins: {
+        legend: {
+          display: true, position: 'top',
+          labels: { font: { family: 'Sarabun,sans-serif', size: 12 }, boxWidth: 12, boxHeight: 12 }
+        },
+        tooltip: {
+          callbacks: {
+            title: (items) => {
+              const idx = items[0].dataIndex;
+              const r = chartRows[idx];
+              return r.label + ' [' + r.sec + ']';
+            },
+            afterBody: (items) => {
+              const idx = items[0].dataIndex;
+              const p = planVals[idx], a = actualVals[idx];
+              const diff = a - p;
+              const pct = p ? Math.round(a / p * 100) : 0;
+              return ['อัตรา: ' + pct + '%', 'ขาด/เกิน: ' + (diff >= 0 ? '+' : '') + diff + ' คน'];
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: {
+            font: { family: 'Sarabun,sans-serif', size: 10 },
+            maxRotation: 35,
+            minRotation: 20,
+            callback: function(val, idx) {
+              // ชื่อสั้นสำหรับ label
+              const lbl = chartRows[idx] ? chartRows[idx].label : '';
+              return lbl.length > 14 ? lbl.substring(0, 13) + '…' : lbl;
+            }
+          }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { font: { family: 'Sarabun,sans-serif', size: 11 } },
+          grid: { color: '#f3f4f6' }
+        }
+      }
+    }
   });
 }
 
@@ -1777,6 +2124,7 @@ function bindAll() {
   document.getElementById('b-regional').addEventListener('change', filterBranches);
   document.getElementById('b-zone').addEventListener('change', filterBranches);
   document.getElementById('btn-change').addEventListener('click', ()=>{
+    if (editId !== null) exitEditMode();
     document.getElementById('step1').style.display='block';
     document.getElementById('step2').style.display='none';
     filterBranches();
